@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>The Tomb of the Grammarian Lysias</title>
+<link href="styles/app_Ben.css" rel="stylesheet" type="text/css">
+</head>
+<body>
+
+<div id="buttons" align="center">
+
+<button id="listen" class="off">Listen</button>
+
+<p id="poetry">
+The Tomb of the Grammarian Lysias<br>
+Poem by Constantine P. Cavafy<br>
+Music by Ben Houge<br>
+English translation by Niko Paterakis<br>
+<br>
+Very near to the right of the entrance to the library<br>
+of Beirut, we buried wise Lysias,<br>
+a grammarian. The spot is very well suited.<br>
+We placed him near to those things that he may<br>
+still remember there – commentaries, texts, technologies, <br>
+variant readings, volumes filled with Hellenistic studies.<br>
+And also this way, his tomb will be seen and honored<br>
+by us, when we pass by the books.
+</p>
+<p id="instructions">
+This piece investigates crowd-distributed sound diffusion;
+the audience enables the piece by going to the web page, pressing the 'Listen' button, 
+and turning up the volume.
+I thought this group might be interested in seeing the control information coming through,
+so I've left the buttons visible that I'm using to push the piece along,
+but they are for display only.
+When you tap the 'Listen' button, you should hear a brief sound,
+which should indicate that your audio is working properly.
+If you don't see the buttons lighting up, try reloading the page.
+Please keep the device awake and the tab with this page in it active.
+Thanks for your participation!
+</p>
+
+</div>
+
+<script src="scripts/BufferLoader.js"></script>
+<script type="text/javascript">
+
+// buttons and cues setup...
+
+var listenButton = document.getElementById("listen");
+
+var listenButtonPressed = false;
+listenButton.onclick = function () {
+	if (listenButton.innerHTML == "Listen") {
+		//playGrain(audioBuffers[0], 0.1, 4.);
+		var fileNode = audioCtx.createBufferSource();
+		var gainNode = audioCtx.createGain();
+		gainNode.connect(audioCtx.destination);
+		
+		fileNode.buffer = audioBuffers[0];	
+		
+		fileNode.connect(gainNode);
+		fileNode.playbackRate.value = 1.;
+		
+		// delay before starting, time into buffer, duration of excerpt
+		fileNode.start(0.2, 0.1, 1.3);
+		
+		var oscNode = audioCtx.createOscillator();
+		oscNode.connect(gainNode);
+		//oscNode.start();
+		var audioBufferNode = audioCtx.createBufferSource();
+		audioBufferNode.buffer = audioBuffers[0];
+		audioBufferNode.connect(gainNode);
+		//audioBufferNode.start();
+		gainNode.gain.setValueCurveAtTime(grainWindow, 0., 1.2);
+		listenButtonPressed = true;
+	}
+	if (listenButton.className == "off") {
+		listenButton.className = "on";
+		listenButton.innerHTML = "Stop Listening";
+		pollForChanges();
+	} else {
+		listenButton.className = "off";
+		listenButton.innerHTML = "Listen";
+	}
+}
+
+var buttonTexts = ["Πλησιέστατα",
+                   "στην βιβλιοθήκη",
+                   "θάψαμε",
+                   "Λυσία",
+                   "Λυσία",
+                   "Λυσία",
+                   "γραμματικόν",
+                   "Ο χώρος",
+                   "(προτού 'σχόλια')",
+                   "σχόλια",
+                   "κείμενα",
+                   "τεχνολογία",
+                   "γραφές",
+                   "εις τεύχη ελληνισμών",
+                   "πολλή ερμηνεία",
+                   "(προτού 'Κ’επίσης')",
+                   "Κ’επίσης",
+                   "έτσι από μας",
+                   "θα βλέπεται",
+                   "και θα τιμάται",
+                   "ο τάφος του",
+                   "όταν που περνούμε",
+                   "στα βιβλία"];
+var numberOfButtons = buttonTexts.length;
+var buttons = document.getElementById("buttons");
+
+for (var i = 0; i < numberOfButtons; i++) {
+	var button = document.createElement("button");
+	button.setAttribute("id", "play" + i);
+	button.setAttribute("disabled", true);
+	button.setAttribute("class", "off");
+	//button.innerHTML = "Off";
+	button.innerHTML = buttonTexts[i];
+	button.onclick = function () {
+		var button = this;
+		var index = button.id.slice(4);
+		//alert(index);
+		if (button.className == "off") {
+			buttonActivated(index);
+		} else {
+			buttonDeactivated(index);
+		}
+	}
+	//button.hasBananas = "you betcha";
+	buttons.appendChild(button);
+	if (i==2 || i==6 || i==8 || i==14 || i==19) {
+		var br = document.createElement("br");
+        buttons.appendChild(br);
+	}
+}
+
+var cues2Play = {};
+//var cues2Play = {"cue0" : "off", "cue1" : "off", "cue2" : "off", "cue3" : "off", "cue4" : "off", "cue5" : "off"};
+
+for (var i = 0; i < numberOfButtons; i++) {
+	var thisCue = "cue" + i;
+	cues2Play[thisCue] = "off";
+}
+
+// audio setup stuff...
+
+var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+var grainGainNode = audioCtx.createGain();
+var phraseGainNode = audioCtx.createGain();
+grainGainNode.connect(audioCtx.destination);
+phraseGainNode.connect(audioCtx.destination);
+grainGainNode.gain.value = 0.5;
+phraseGainNode.gain.value = 1.;
+
+
+// granular stuff...
+
+var startTime, realTime, targetTime;
+var timerID;
+var granularPhrases = [];
+
+//grain window stuff
+var grainWindow;
+var grainWindowLength = 16384;
+grainWindow = new Float32Array(grainWindowLength);
+for (var i = 0; i < grainWindowLength; ++i)
+    grainWindow[i] = Math.sin(Math.PI * i / grainWindowLength);
+
+function playGranularTone(bufferToPlay, minToneDuration, maxToneDuration, grainInterval, minGrainDur, maxGrainDur, pitchMultiplier, minVol, maxVol) {
+	//note that these are in seconds
+	var toneDuration = (maxToneDuration - minToneDuration) * Math.random() + minToneDuration;
+	startTime = audioCtx.currentTime;
+	realTime = startTime;
+	targetTime = startTime + toneDuration;
+	//alert(startTime);
+	//alert(targetTime);
+	scheduledGrainPlayer(bufferToPlay, minGrainDur, maxGrainDur, minVol, maxVol, pitchMultiplier, grainInterval, targetTime);
+	return toneDuration;
+}
+
+// minSoundDur, maxSoundDur
+// minReps, maxReps
+// interval between grains
+// minGrainLength, maxGrainLength
+// minVol, maxVol
+// "octave shift flag" did I ever really use this?
+// list of pitches
+//playGranularPhrase:0, 3, 0.5, 6., 10., 2, 3, 0.2, 1., 1.2, 0.5, 0.75, 0, [9./8., 1., 7./6.]
+
+// creating an intermittentSound object with an object constructor
+function GranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, phraseDur, pitchArray) {
+	// ok, get this: if there's a phraseDur, we use that to determine when the phrase will end;
+	// otherwise we rely on min/max Reps.
+	this.index = granularPhraseIndex;
+	this.minToneDur = minToneDur;
+	this.maxToneDur = maxToneDur;
+	this.minReps = minReps;
+	this.maxReps = maxReps;
+	this.grainInterval = grainInterval;
+	this.minGrainDur = minGrainDur;
+	this.maxGrainDur = maxGrainDur;
+	this.minVol = minVol;
+	this.maxVol = maxVol;
+	this.octaveShift = octaveShift;
+	this.phraseDur = phraseDur;
+	this.pitchArray = pitchArray.sort();
+	this.lastPitch = 0.;
+	this.numberOfReps = Math.floor(((maxReps - minReps) + 1) * Math.random() + minReps);
+	this.octaveMultiplier = 1 + Math.floor((octaveShift + 1) * Math.random());
+	if (this.octaveMultiplier > 1.) {
+		this.minVol *= 0.5;
+		this.maxVol *= 0.5;
+	}
+	this.targetTime = audioCtx.currentTime + phraseDur;
+}
+
+GranularPhrase.prototype.playGranularPhrase = function() {
+	tickDownGranularPhrase(this.index);
+}
+
+
+function tickDownGranularPhrase(granularPhraseIndex) {
+	var phraseToPlay = granularPhrases[granularPhraseIndex];
+	// two different processes depending on whether it's descending or not
+	// and this is kind of horrible, but what determines this is whether we use min/maxReps to determine duration
+	// or whether we provide a phraseDur explicitly.
+	if (phraseToPlay.phraseDur) {
+		var pitchMultiplier;
+		if (phraseToPlay.lastPitch == phraseToPlay.pitchArray[0]) {
+			var newPitchIndex = Math.floor((phraseToPlay.pitchArray.length - 1) * Math.random()) + 1;
+			pitchMultiplier = phraseToPlay.pitchArray[newPitchIndex];
+		} else {
+			var tempArray = [];
+			var i;
+			for (i = 0; i < phraseToPlay.pitchArray.length; i++) {
+				if (phraseToPlay.pitchArray[i] < phraseToPlay.lastPitch || phraseToPlay.lastPitch == 0) {
+					tempArray[i] = phraseToPlay.pitchArray[i];
+				}
+			}
+			pitchMultiplier = tempArray[Math.floor(tempArray.length * Math.random())];
+		}
+		//play phrase
+		var toneDur = playGranularTone(phraseToPlay.index, phraseToPlay.minToneDur, phraseToPlay.maxToneDur, phraseToPlay.grainInterval, phraseToPlay.minGrainDur, phraseToPlay.maxGrainDur, pitchMultiplier, phraseToPlay.minVol, phraseToPlay.maxVol);
+		// if we're not at base pitch || we haven't hit the phraseDur yet, schedule next phrase
+		if (pitchMultiplier != phraseToPlay.pitchArray[0] || audioCtx.currentTime < phraseToPlay.targetTime) {
+			window.setTimeout(tickDownGranularPhrase, toneDur * 1000., granularPhraseIndex);
+		}
+	} else {
+		// this is the original granularPhrase behavior before I added this descending nonsense
+		//play the granularPhrase, checking not to repeat pitches
+		var pitchMultiplier;
+		do {
+			var newPitchIndex = Math.floor((phraseToPlay.pitchArray.length) * Math.random()); 
+			pitchMultiplier = phraseToPlay.pitchArray[newPitchIndex] * phraseToPlay.octaveMultiplier;
+		} while (phraseToPlay.lastPitch == pitchMultiplier);
+		var toneDur = playGranularTone(phraseToPlay.index, phraseToPlay.minToneDur, phraseToPlay.maxToneDur, phraseToPlay.grainInterval, phraseToPlay.minGrainDur, phraseToPlay.maxGrainDur, pitchMultiplier, phraseToPlay.minVol, phraseToPlay.maxVol);
+		// two ways of counting down: min/maxReps (for random pitch choices) 
+		// or checking to see whether we've exceeded the phraseDur (for descending phrases, since we always want to get back to the base note)
+		//if the number of reps is greater than 0 cue another one
+		if (phraseToPlay.numberOfReps > 0) {
+			window.setTimeout(tickDownGranularPhrase, toneDur * 1000., granularPhraseIndex);
+		}
+		//tick down the number of reps
+		granularPhrases[granularPhraseIndex].numberOfReps--;
+	}
+	//set last pitch used
+	granularPhrases[granularPhraseIndex].lastPitch = pitchMultiplier;
+}
+
+// admitting that this is a little silly; ought to create the object in my switch below...
+function playGranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, phraseDur, pitchArray) {
+	granularPhrases[granularPhraseIndex] = new GranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, phraseDur, pitchArray);
+	granularPhrases[granularPhraseIndex].playGranularPhrase();
+}
+
+//also a little silly...
+function playGranularDescendingPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, pitchArray) {
+	granularPhrases[granularPhraseIndex] = new GranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, pitchArray);
+	granularPhrases[granularPhraseIndex].playGranularPhrase();
+}
+
+
+function scheduledGrainPlayer(bufferToPlay, minGrainDur, maxGrainDur, minVol, maxVol, pitchMultiplier, grainInterval, targetTime) {
+	// play grain
+	// calculate next grain time
+	// if next grain time < toneEndTime, schedule next grain
+	
+	// kind of silly that some of the randomization is being done in the playGrain function,
+	// while other randomization is being done here...
+
+	var grainDensity = 1. / grainInterval;
+	var grainDuration = (maxGrainDur - minGrainDur) * Math.random() + minGrainDur;
+	var volume = (maxVol - minVol) * Math.random() + minVol;
+	playGrain(bufferToPlay, grainDuration, pitchMultiplier, volume);
+	//remember, all in seconds...
+	//var timeToNextGrain = (2. * grainInterval) * Math.random();
+	var timeToNextGrain = grainInterval;
+	var nextGrainTime = audioCtx.currentTime + timeToNextGrain;
+	if (nextGrainTime < targetTime && cues2Play.panic != "yes") {
+		var scheduleString = "scheduledGrainPlayer(" +
+		"audioBuffers[0]" + ", " +
+		minGrainDur + ", " +
+		maxGrainDur + ", " +
+		minVol + ", " +
+		maxVol + ", " +
+		pitchMultiplier + ", " +
+		grainInterval + ", " +
+		targetTime + ")";
+		//alert(scheduleString);
+		//remember, setTimeout wants ms...
+		var timeToNextGrainInMs = timeToNextGrain * 1000.;
+		if (timeToNextGrainInMs < 10.) {
+			timeToNextGrainInMs = 10.;
+		}
+		var timeoutID = window.setTimeout(scheduleString, timeToNextGrainInMs);
+	}
+}
+
+
+// What do I want to send it?
+// buffer to use, duration, pitch
+// then let it pick an appropriate subsection
+function playGrain(bufferToPlay, grainDuration, pitchMultiplier, volume) {
+	// this will be in seconds, adjusted for pitch
+	var bufferDuration = (bufferToPlay.length/bufferToPlay.sampleRate)/pitchMultiplier;
+	var startTime;
+	if (grainDuration > bufferDuration) {
+		grainDuration = bufferDuration;
+		startTime = 0;
+	} else {
+		startTime = (bufferDuration - grainDuration) * Math.random() * pitchMultiplier;
+	}
+	
+	var fileNode = audioCtx.createBufferSource();
+	var gainNode = audioCtx.createGain();
+	var gainNode2 = audioCtx.createGain();
+	gainNode.connect(gainNode2);
+	gainNode2.connect(grainGainNode);
+	gainNode2.gain.value = volume;
+	fileNode.buffer = bufferToPlay;	
+	fileNode.connect(gainNode);
+	fileNode.playbackRate.value = pitchMultiplier;
+	
+	// delay before starting, time into buffer, duration of excerpt
+	fileNode.start(0., startTime, grainDuration * pitchMultiplier);
+	
+	//gainNode.gain.value = 0.;
+	gainNode.gain.setValueCurveAtTime(grainWindow, 0., grainDuration);
+}
+
+
+// intermittent sound stuff...
+var intermittentSounds = [];
+var numberOfReps;
+
+function playBuffer(bufferIndex, volume) {
+	var audioBufferSource = audioCtx.createBufferSource();
+	audioBufferSource.buffer = audioBuffers[bufferIndex];
+	//Ah, looks like we've got a vestigial global gain here that the grain stuff ignores
+	//Would be good to have global gain nodes for granular synthesis and intermittent sounds
+	audioBufferGain = audioCtx.createGain();
+	audioBufferGain.gain.value = volume;
+	audioBufferSource.connect(audioBufferGain);
+	audioBufferGain.connect(phraseGainNode);
+	audioBufferSource.start();
+}
+
+function tickDownIntermittentSound(intermittentSoundIndex) {
+	var volume = (intermittentSounds[intermittentSoundIndex].maxVol - intermittentSounds[intermittentSoundIndex].minVol) * Math.random() + intermittentSounds[intermittentSoundIndex].minVol;
+	playBuffer(intermittentSounds[intermittentSoundIndex].buffer, volume);
+	var bufferDur = audioBuffers[intermittentSounds[intermittentSoundIndex].buffer].duration;
+	if (intermittentSounds[intermittentSoundIndex].numberOfReps > 0 && cues2Play.panic != "yes") {
+		var pauseDur = (intermittentSounds[intermittentSoundIndex].maxPause - intermittentSounds[intermittentSoundIndex].minPause) * 
+		Math.random() + intermittentSounds[intermittentSoundIndex].minPause;
+		window.setTimeout(tickDownIntermittentSound, (pauseDur + bufferDur) * 1000., intermittentSoundIndex);
+	}
+	intermittentSounds[intermittentSoundIndex].numberOfReps--;
+}
+
+// creating an intermittentSound object with an object constructor
+function IntermittentSound(index, buffer, minPause, maxPause, minReps, maxReps, minVol, maxVol) {
+	this.index = index;
+	this.buffer = buffer;
+	this.minPause = minPause;
+	this.maxPause = maxPause;
+	this.minReps = minReps;
+	this.maxReps = maxReps;
+	this.minVol = minVol;
+	this.maxVol = maxVol;
+	this.numberOfReps = Math.floor(((maxReps - minReps) + 1) * Math.random() + minReps);
+}
+
+IntermittentSound.prototype.playIntermittentSound = function() {
+	//playBuffer(1);
+	tickDownIntermittentSound(this.index);
+}
+
+
+// polling and triggering stuff...
+
+function buttonDeactivated(index) {
+	//alert("play" + index);
+	var buttonClicked = document.getElementById("play" + index);
+	buttonClicked.className = "off";
+	//button.innerHTML = buttonTexts[i];
+	//buttonClicked.innerHTML = "Off";
+	buttonClicked.innerHTML = buttonTexts[index];
+}
+
+function buttonActivated(index) {
+	var buttonClicked = document.getElementById("play" + index);
+	buttonClicked.className = "on";
+	buttonClicked.innerHTML = "On";
+	//intermittentSounds[index] = new IntermittentSound(index, 0.1, 0.1, 0, 0);
+	//intermittentSounds[index].playIntermittentSound();
+	//alert(buttonClicked.id);
+	
+	switch (Number(index)) {
+		case 0:	
+			//Πλησιέστατα
+			//playGranularSound:0: 0, 1.0, 55., 65., 0.2, 1., 1.2, 1.,   1.,   0.8,  1.
+			//playGranularTone(bufferToPlay, toneDurationMin, toneDurationMax, grainInterval, minGrainDur, maxGrainDur, pitchMultiplier)
+			playGranularTone(audioBuffers[0], 55., 65., 0.2, 1., 1.2, 1., 0.8, 1.);
+      		break;
+		case 1:
+			//στην βιβλιοθήκη
+			//playGranularSound:0, 1, 0.5, 40., 46., 0.2, 1., 1.2, 0.5,  0.5,  0.3,  0.4
+			playGranularTone(audioBuffers[0], 40., 46., 0.2, 1., 1.2, 0.5, 0.3, 0.4);
+			break;
+		case 2:
+			//θάψαμε
+			//playGranularSound:0, 2, 0.5, 45., 50., 0.2, 1., 1.2, 0.75, 0.75, 0.15, 0.3
+			playGranularTone(audioBuffers[0], 45., 50., 0.2, 1., 1.2, 0.75, 0.15, 0.3);
+			break;
+		case 3:
+			//Λυσία 1
+			//setSoundParams:(long)sender.tag, 0.1, 1.25, 4, 7, 0.35, 0.5, 1, 0
+			var soundId = 0;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 1, 0.1, 1.25, 4, 7, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 4:
+			//Λυσία 2
+			//setSoundParams:(long)sender.tag, 0.1, 1.25, 3, 6, 0.35, 0.5, 1, 0]
+			var soundId = 1;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 2, 0.1, 1.25, 3, 6, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 5:
+			//Λυσία 3
+			//setSoundParams:(long)sender.tag, 0.1, 1.25, 3, 5, 0.35, 0.5, 1, 0
+			var soundId = 2;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 3, 0.1, 1.25, 3, 5, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 6:
+			//γραμματικόν
+			//setSoundParams:(long)sender.tag, 0.1, 1., 3, 4, 0.35, 0.5, 1, 0
+			var soundId = 3;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 4, 0.1, 1., 3, 4, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 7:
+			//Ο χώρος 
+			//add granular phrase thing...
+			//playGranularPhrase:0, 3, 0.5, 6., 10., 2, 3, 0.2, 1., 1.2, 0.5, 0.75, 0, [9./8., 1., 7./6.]
+			window.setTimeout("playGranularPhrase(audioBuffers[0], 6., 10., 2, 3, 0.3, 1., 1.2, 0.35, 0.5, 0, 0., [9./8., 1., 7./6.])", 1000.);
+			//playGranularSound:0, 2, 0.5, 35., 45., 0.2, 1., 1.2, 0.75, 0.75, 0.35, 0.5
+			playGranularTone(audioBuffers[0], 35., 45., 0.5, 1., 1.2, 0.75, 0.35, 0.5);
+			break;
+		case 8:
+			//pre-σχόλια
+			//playGranularSound:0, 0, 0.5, 35., 45., 0.35, 1.5, 2., 0.375, 0.375, 0.35, 0.45
+			playGranularTone(audioBuffers[0], 35., 45., 0.5, 1.5, 2., 0.375, 0.35, 0.45);
+			break;
+		case 9:
+			//σχόλια
+			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 12, 0.35, 0.5, 1, 0
+			var soundId = 4;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 5, 0.1, 1.5, 7, 12, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 10:
+			//κείμενα
+			//playGranularSound:0, 1, 0.5, 40., 50., 0.2, 0.8, 1.1, 0.9375, 0.9375, 0.25, 0.35
+			window.setTimeout("playGranularTone(audioBuffers[0], 40., 50., 0.2, 0.8, 1.1, 0.9375, 0.25, 0.35)", 1550.);
+			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 10, 0.35, 0.5, 1, 0
+			var soundId = 5;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 6, 0.1, 1.5, 7, 10, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 11:
+			//τεχνολογία
+			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 10, 0.35, 0.5, 1, 0
+			var soundId = 6;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 7, 0.1, 1.5, 7, 10, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 12:
+			//γραφές
+			//setSoundParams:(long)sender.tag, 0.1, 1., 5, 9, 0.35, 0.5, 1, 0
+			var soundId = 7;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 8, 0.1, 1., 5, 9, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 13:
+			//εις τεύχη ελληνισμών
+			//playGranularSound:0, 3, 0.5, 25., 35., 0.25, 1.5, 2., 1./3., 1./3., 0.2, 0.3
+			window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.25, 1.5, 2, (1./3.), 0.2, 0.3)", 1550.);
+			//setSoundParams:(long)sender.tag, 0.1, 1., 1, 3, 0.35, 0.5, 1, 0
+			var soundId = 8;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 9, 0.1, 1., 1, 3, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 14:
+			//πολλή ερμηνεία
+			//playGranularSound:0, 2, 0.5, 25., 35., 0.2, 0.8, 1., 1.25, 1.25, 0.1, 0.2
+			window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.2, 0.8, 1, 1.25, 0.1, 0.2)", 1950.);
+			//setSoundParams:(long)sender.tag, 0.1, 0.5, 1, 3, 0.35, 0.5, 1, 0
+			var soundId = 9;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 10, 0.1, 0.5, 1, 3, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 15:
+			//pre-Κ’επίσης
+			//playGranularSound:0, 0, 0.5, 35., 45., 0.3, 1.5, 2., 1./3., 1./3., 0.35, 0.5
+			playGranularTone(audioBuffers[0], 35., 45., 0.3, 1.5, 2., (1./3.), 0.35, 0.5);
+			break;
+		case 16:
+			//Κ’επίσης
+			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 13, 0.35, 0.5, 1, 0
+			var soundId = 10;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 11, 0.1, 1.5, 7, 13, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 17:
+			//έτσι από μας
+			//setSoundParams:(long)sender.tag, 0.1, 1.5, 6, 12, 0.35, 0.5, 1, 0
+			var soundId = 11;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 12, 0.1, 1.5, 6, 12, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			//add descending granular phrase thing here!
+			//playGranularDescPhrase:0: 4, 0.5, 0.5, 4.8, 35., 0.1, 0.2, 0.4, 0.15, 0.25, 1, [4./3., 9./5., 8./5., 3./2., 7./5.];
+			window.setTimeout("playGranularPhrase(audioBuffers[0], 0.5, 4.8, 0, 0, 0.1, 0.2, 0.4, 0.15, 0.25, 1, 35., [4./3., 9./5., 8./5., 3./2., 7./5.])", 1500.);
+			break;
+		case 18:
+			//θα βλέπεται
+			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 12, 0.35, 0.5, 1, 0
+			var soundId = 12;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 13, 0.1, 1.5, 7, 12, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 19:
+			//και θα τιμάται
+			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 12, 0.35, 0.5, 1, 0
+			var soundId = 13;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 14, 0.1, 1.5, 7, 12, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			// cue those three delayed Lysias!
+			//setSoundParams:1, 0.1, 1.5, 2, 4, 0.2, 0.35, 0, 1
+			var soundId = 17;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 1, 0.1, 1.5, 2, 4, 0.2, 0.35);
+			window.setTimeout("intermittentSounds[17].playIntermittentSound()", 1000.);
+			//setSoundParams:2, 0.1, 1.5, 1, 4, 0.2, 0.35, 0, 1
+			var soundId = 18;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 2, 0.1, 1.5, 1, 4, 0.2, 0.35);
+			window.setTimeout("intermittentSounds[18].playIntermittentSound()", 3000.);
+			//setSoundParams:3, 0.1, 1.5, 1, 4, 0.2, 0.35, 0, 1
+			var soundId = 19;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 3, 0.1, 1.5, 1, 4, 0.2, 0.35);
+			window.setTimeout("intermittentSounds[19].playIntermittentSound()", 5500.);
+			break;
+		case 20:
+			//ο τάφος του
+			//setSoundParams:(long)sender.tag, 0.1, 1., 4, 7, 0.35, 0.5, 1, 0
+			var soundId = 14;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 15, 0.1, 1.5, 7, 12, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 21:
+			//όταν που περνούμε
+			//setSoundParams:(long)sender.tag, 0.1, 1., 3, 6, 0.35, 0.5, 1, 0
+			var soundId = 15;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 16, 0.1, 1.5, 7, 12, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+		case 22:
+			//στα βιβλία
+			//setSoundParams:(long)sender.tag, 0.1, 1., 3, 5, 0.35, 0.5, 1, 0
+			var soundId = 16;
+			intermittentSounds[soundId] = new IntermittentSound(soundId, 17, 0.1, 1.5, 7, 12, 0.35, 0.5);
+			intermittentSounds[soundId].playIntermittentSound();
+			break;
+	}
+	
+}
+
+function pollForChanges() {
+	if (listenButton.className == "on") {
+		getCues();
+		window.setTimeout(pollForChanges, 1000.);
+	}
+}
+
+
+// network and file loading stuff
+var audioBuffers = [];
+var buffersAreLoaded = false;
+
+bufferLoader = new BufferLoader(audioCtx, 
+		'sounds/unbalanced/compressed/',
+		['eeeeee.mp4', 
+		 'Lysia1.mp4', 
+		 'Lysia2.mp4', 
+		 'Lysia3.mp4',
+		 'gramatikon.mp4',
+		 'list1.mp4',
+		 'list2.mp4',
+		 'list3.mp4',
+		 'list4.mp4',
+		 'list5.mp4',
+		 'list6.mp4',
+		 'ending1.mp4',
+		 'ending2.mp4',
+		 'ending3.mp4',
+		 'ending4.mp4',
+		 'ending5.mp4',
+		 'ending6.mp4',
+		 'ending7.mp4',], 
+		 finishedLoading);
+bufferLoader.load();
+
+function finishedLoading(bufferList) {
+	for (var i = 0; i < bufferList.length; ++i) {
+		audioBuffers[i] = bufferList[i];
+	}
+	buffersAreLoaded = true;
+}
+
+function getCues() {
+	var xhr;
+	try{
+		// Opera 8.0+, Firefox, Safari
+		xhr = new XMLHttpRequest();
+	} catch (e){
+		// Internet Explorer Browsers
+		try{
+			xhr = new ActiveXObject("Msxml2.XMLHTTP");
+		} catch (e) {
+			try{
+				xhr = new ActiveXObject("Microsoft.XMLHTTP");
+			} catch (e){
+				// Something went wrong
+				alert("Your browser broke!");
+				return false;
+			}
+		}
+	}
+	xhr.onreadystatechange = function() {
+		if (xhr.readyState == 4) {
+			var newCues2Play = JSON.parse(xhr.responseText);
+			//buffersAreLoaded
+			if (buffersAreLoaded) {
+				for (var cue in newCues2Play) {
+					if (cues2Play[cue] != newCues2Play[cue]) {
+						cues2Play[cue] = newCues2Play[cue];
+						var cueIndex = cue.slice(3);
+						//alert("Hi, mom!");
+						if (cue != "panic") {
+							if (cues2Play[cue] == "on") {
+								buttonActivated(cueIndex);
+								//intermittentSounds[index] = new IntermittentSound(index, 1., 5., 3, 5);
+								//intermittentSounds[index].playIntermittentSound();
+							} else {
+								buttonDeactivated(cueIndex);
+							}
+						} else {
+							//alert("Start panicking!");
+						}
+					}
+				}
+			}
+		}
+	}
+	xhr.open('GET', 'cues.json', true);
+	xhr.overrideMimeType("application/json");
+	xhr.send(null);
+}
+
+</script>
+
+</body>
+</html>
