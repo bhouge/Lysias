@@ -83,6 +83,14 @@ listenButton.onclick = function () {
 	} else {
 		listenButton.className = "off";
 		listenButton.innerHTML = "Listen";
+		//alert(intermittentSounds);
+		for (var i = 0; i < intermittentSounds.length; i++) {
+			intermittentSounds[i].stop();
+			//alert(intermittentSounds[i]);
+		}
+		for (var i = 0; i < delayedSounds.length; i++) {
+			window.clearTimeout(delayedSounds[i]);
+		}
 	}
 }
 
@@ -115,7 +123,7 @@ var buttons = document.getElementById("buttons");
 for (var i = 0; i < numberOfButtons; i++) {
 	var button = document.createElement("button");
 	button.setAttribute("id", "play" + i);
-	//button.setAttribute("disabled", true);
+	button.setAttribute("disabled", true);
 	button.setAttribute("class", "off");
 	//button.innerHTML = "Off";
 	button.innerHTML = buttonTexts[i];
@@ -355,7 +363,10 @@ function playGrain(bufferToPlay, grainDuration, pitchMultiplier, volume) {
 
 // intermittent sound stuff...
 var intermittentSounds = [];
-var numberOfReps;
+var delayedSounds = [];
+
+/* 
+// moving to IntermittentSound.js 
 
 function playBuffer(bufferIndex, volume) {
 	var audioBufferSource = audioCtx.createBufferSource();
@@ -380,6 +391,7 @@ function tickDownIntermittentSound(intermittentSoundIndex) {
 	}
 	intermittentSounds[intermittentSoundIndex].numberOfReps--;
 }
+*/
 
 
 
@@ -424,29 +436,34 @@ function buttonActivated(index) {
 			//Λυσία 1
 			//setSoundParams:(long)sender.tag, 0.1, 1.25, 4, 7, 0.35, 0.5, 1, 0
 			//var Lysia1 = new IntermittentSound(0, 1, 0.1, 1.25, 4, 7, 0.35, 0.5);
-			var Lysia1 = new IntermittentSound(1, 0.1, 1.25, 2, 2, 0.35, 0.5);
-			Lysia1.playIntermittentSound();
+			var Lysia1 = new IntermittentSound(audioBuffers[1], 0.1, 1.25, 4, 7, 0.35, 0.5);
+			Lysia1.connect(phraseGainNode);
+			Lysia1.play();
+			intermittentSounds.push(Lysia1);
 			break;
 		case 4:
 			//Λυσία 2
 			//setSoundParams:(long)sender.tag, 0.1, 1.25, 3, 6, 0.35, 0.5, 1, 0]
-			var soundId = 1;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 2, 0.1, 1.25, 3, 6, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var Lysia2 = new IntermittentSound(audioBuffers[2], 0.1, 1.25, 3, 6, 0.35, 0.5);
+			Lysia2.connect(phraseGainNode);
+			Lysia2.play();
+			intermittentSounds.push(Lysia2);
 			break;
 		case 5:
 			//Λυσία 3
 			//setSoundParams:(long)sender.tag, 0.1, 1.25, 3, 5, 0.35, 0.5, 1, 0
-			var soundId = 2;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 3, 0.1, 1.25, 3, 5, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var Lysia3 = new IntermittentSound(audioBuffers[3], 0.1, 1.25, 3, 5, 0.35, 0.5);
+			Lysia3.connect(phraseGainNode);
+			Lysia3.play();
+			intermittentSounds.push(Lysia3);
 			break;
 		case 6:
 			//γραμματικόν
 			//setSoundParams:(long)sender.tag, 0.1, 1., 3, 4, 0.35, 0.5, 1, 0
-			var soundId = 3;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 4, 0.1, 1., 3, 4, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var grammatikon = new IntermittentSound(audioBuffers[4], 0.1, 1., 3, 4, 0.35, 0.5);
+			grammatikon.connect(phraseGainNode);
+			grammatikon.play();
+			intermittentSounds.push(grammatikon);
 			break;
 		case 7:
 			//Ο χώρος 
@@ -464,50 +481,56 @@ function buttonActivated(index) {
 		case 9:
 			//σχόλια
 			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 12, 0.35, 0.5, 1, 0
-			var soundId = 4;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 5, 0.1, 1.5, 7, 12, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var scholia = new IntermittentSound(audioBuffers[5], 0.1, 1.5, 7, 12, 0.35, 0.5);
+			scholia.connect(phraseGainNode);
+			scholia.play();
+			intermittentSounds.push(scholia);
 			break;
 		case 10:
 			//κείμενα
 			//playGranularSound:0, 1, 0.5, 40., 50., 0.2, 0.8, 1.1, 0.9375, 0.9375, 0.25, 0.35
-			window.setTimeout("playGranularTone(audioBuffers[0], 40., 50., 0.2, 0.8, 1.1, 0.9375, 0.25, 0.35)", 1550.);
+			delayedSounds.push(window.setTimeout("playGranularTone(audioBuffers[0], 40., 50., 0.2, 0.8, 1.1, 0.9375, 0.25, 0.35)", 1550.));
 			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 10, 0.35, 0.5, 1, 0
-			var soundId = 5;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 6, 0.1, 1.5, 7, 10, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var keimena = new IntermittentSound(audioBuffers[6], 0.1, 1.5, 7, 10, 0.35, 0.5);
+			keimena.connect(phraseGainNode);
+			keimena.play();
+			intermittentSounds.push(keimena);
 			break;
 		case 11:
 			//τεχνολογία
 			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 10, 0.35, 0.5, 1, 0
-			var soundId = 6;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 7, 0.1, 1.5, 7, 10, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var technologia = new IntermittentSound(audioBuffers[7], 0.1, 1.5, 7, 10, 0.35, 0.5);
+			technologia.connect(phraseGainNode);
+			technologia.play();
+			intermittentSounds.push(technologia);
 			break;
 		case 12:
 			//γραφές
 			//setSoundParams:(long)sender.tag, 0.1, 1., 5, 9, 0.35, 0.5, 1, 0
-			var soundId = 7;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 8, 0.1, 1., 5, 9, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var grafes = new IntermittentSound(audioBuffers[8], 0.1, 1., 5, 9, 0.35, 0.5);
+			grafes.connect(phraseGainNode);
+			grafes.play();
+			intermittentSounds.push(grafes);
 			break;
 		case 13:
 			//εις τεύχη ελληνισμών
 			//playGranularSound:0, 3, 0.5, 25., 35., 0.25, 1.5, 2., 1./3., 1./3., 0.2, 0.3
-			window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.25, 1.5, 2, (1./3.), 0.2, 0.3)", 1550.);
+			delayedSounds.push(window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.25, 1.5, 2, (1./3.), 0.2, 0.3)", 1550.));
 			//setSoundParams:(long)sender.tag, 0.1, 1., 1, 3, 0.35, 0.5, 1, 0
-			var soundId = 8;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 9, 0.1, 1., 1, 3, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var eisTevchiEllinismon = new IntermittentSound(audioBuffers[9], 0.1, 1., 1, 3, 0.35, 0.5);
+			eisTevchiEllinismon.connect(phraseGainNode);
+			eisTevchiEllinismon.play();
+			intermittentSounds.push(eisTevchiEllinismon);
 			break;
 		case 14:
 			//πολλή ερμηνεία
 			//playGranularSound:0, 2, 0.5, 25., 35., 0.2, 0.8, 1., 1.25, 1.25, 0.1, 0.2
-			window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.2, 0.8, 1, 1.25, 0.1, 0.2)", 1950.);
+			delayedSounds.push(window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.2, 0.8, 1, 1.25, 0.1, 0.2)", 1950.));
 			//setSoundParams:(long)sender.tag, 0.1, 0.5, 1, 3, 0.35, 0.5, 1, 0
-			var soundId = 9;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 10, 0.1, 0.5, 1, 3, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var polliErmineia = new IntermittentSound(audioBuffers[10], 0.1, 0.5, 1, 3, 0.35, 0.5);
+			polliErmineia.connect(phraseGainNode);
+			polliErmineia.play();
+			intermittentSounds.push(polliErmineia);
 			break;
 		case 15:
 			//pre-Κ’επίσης
@@ -517,70 +540,87 @@ function buttonActivated(index) {
 		case 16:
 			//Κ’επίσης
 			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 13, 0.35, 0.5, 1, 0
-			var soundId = 10;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 11, 0.1, 1.5, 7, 13, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var kepisis = new IntermittentSound(audioBuffers[11], 0.1, 1.5, 7, 13, 0.35, 0.5);
+			kepisis.connect(phraseGainNode);
+			kepisis.play();
+			intermittentSounds.push(kepisis);
 			break;
 		case 17:
 			//έτσι από μας
 			//setSoundParams:(long)sender.tag, 0.1, 1.5, 6, 12, 0.35, 0.5, 1, 0
-			var soundId = 11;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 12, 0.1, 1.5, 6, 12, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var etsiApoMas = new IntermittentSound(audioBuffers[12], 0.1, 1.5, 6, 12, 0.35, 0.5);
+			etsiApoMas.connect(phraseGainNode);
+			etsiApoMas.play();
+			intermittentSounds.push(etsiApoMas);
 			//add descending granular phrase thing here!
 			//playGranularDescPhrase:0: 4, 0.5, 0.5, 4.8, 35., 0.1, 0.2, 0.4, 0.15, 0.25, 1, [4./3., 9./5., 8./5., 3./2., 7./5.];
-			window.setTimeout("playGranularPhrase(audioBuffers[0], 0.5, 4.8, 0, 0, 0.1, 0.2, 0.4, 0.15, 0.25, 1, 35., [4./3., 9./5., 8./5., 3./2., 7./5.])", 1500.);
+			delayedSounds.push(window.setTimeout("playGranularPhrase(audioBuffers[0], 0.5, 4.8, 0, 0, 0.1, 0.2, 0.4, 0.15, 0.25, 1, 35., [4./3., 9./5., 8./5., 3./2., 7./5.])", 1500.));
 			break;
 		case 18:
 			//θα βλέπεται
 			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 12, 0.35, 0.5, 1, 0
-			var soundId = 12;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 13, 0.1, 1.5, 7, 12, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var thaVlepetai = new IntermittentSound(audioBuffers[13], 0.1, 1.5, 7, 12, 0.35, 0.5);
+			thaVlepetai.connect(phraseGainNode);
+			thaVlepetai.play();
+			intermittentSounds.push(thaVlepetai);
 			break;
 		case 19:
 			//και θα τιμάται
 			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 12, 0.35, 0.5, 1, 0
-			var soundId = 13;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 14, 0.1, 1.5, 7, 12, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var kaiThaTimatai = new IntermittentSound(audioBuffers[14], 0.1, 1.5, 7, 12, 0.35, 0.5);
+			kaiThaTimatai.connect(phraseGainNode);
+			kaiThaTimatai.play();
+			intermittentSounds.push(kaiThaTimatai);
+			
 			// cue those three delayed Lysias!
+			
 			//setSoundParams:1, 0.1, 1.5, 2, 4, 0.2, 0.35, 0, 1
-			var soundId = 17;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 1, 0.1, 1.5, 2, 4, 0.2, 0.35);
-			window.setTimeout("intermittentSounds[17].playIntermittentSound()", 1000.);
+			var delayedLysia1 = new IntermittentSound(audioBuffers[1], 0.1, 1.5, 2, 4, 0.2, 0.35);
+			delayedLysia1.connect(phraseGainNode);
+			var soundID1 = intermittentSounds.push(delayedLysia1) - 1;
+			var randomDelay = Math.random() * 1000. + 500.; // was 1000.
+			delayedSounds.push(window.setTimeout("intermittentSounds[" + soundID1 + "].play()", randomDelay));
+			
 			//setSoundParams:2, 0.1, 1.5, 1, 4, 0.2, 0.35, 0, 1
-			var soundId = 18;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 2, 0.1, 1.5, 1, 4, 0.2, 0.35);
-			window.setTimeout("intermittentSounds[18].playIntermittentSound()", 3000.);
+			var delayedLysia2 = new IntermittentSound(audioBuffers[2], 0.1, 1.5, 1, 4, 0.2, 0.35);
+			delayedLysia2.connect(phraseGainNode);
+			var soundID2 = intermittentSounds.push(delayedLysia2) - 1;
+			randomDelay = Math.random() * 1000. + 2500.; // was 3000.
+			delayedSounds.push(window.setTimeout("intermittentSounds[" + soundID2 + "].play()", randomDelay));
+			
 			//setSoundParams:3, 0.1, 1.5, 1, 4, 0.2, 0.35, 0, 1
-			var soundId = 19;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 3, 0.1, 1.5, 1, 4, 0.2, 0.35);
-			window.setTimeout("intermittentSounds[19].playIntermittentSound()", 5500.);
+			var delayedLysia3 = new IntermittentSound(audioBuffers[3], 0.1, 1.5, 1, 4, 0.2, 0.35);
+			delayedLysia3.connect(phraseGainNode);
+			var soundID3 = intermittentSounds.push(delayedLysia3) - 1;
+			randomDelay = Math.random() * 1000. + 5000.; // was 5500.
+			delayedSounds.push(window.setTimeout("intermittentSounds[" + soundID3 + "].play()", 5500.));
+			
 			break;
 		case 20:
 			//ο τάφος του
 			//setSoundParams:(long)sender.tag, 0.1, 1., 4, 7, 0.35, 0.5, 1, 0
-			var soundId = 14;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 15, 0.1, 1.5, 7, 12, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var oTafosTou = new IntermittentSound(audioBuffers[15], 0.1, 1.5, 7, 12, 0.35, 0.5);
+			oTafosTou.connect(phraseGainNode);
+			oTafosTou.play();
+			intermittentSounds.push(oTafosTou);
 			break;
 		case 21:
 			//όταν που περνούμε
 			//setSoundParams:(long)sender.tag, 0.1, 1., 3, 6, 0.35, 0.5, 1, 0
-			var soundId = 15;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 16, 0.1, 1.5, 7, 12, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var otanPouPernoume = new IntermittentSound(audioBuffers[16], 0.1, 1.5, 7, 12, 0.35, 0.5);
+			otanPouPernoume.connect(phraseGainNode);
+			otanPouPernoume.play();
+			intermittentSounds.push(otanPouPernoume);
 			break;
 		case 22:
 			//στα βιβλία
 			//setSoundParams:(long)sender.tag, 0.1, 1., 3, 5, 0.35, 0.5, 1, 0
-			var soundId = 16;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 17, 0.1, 1.5, 7, 12, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			var staVivlia = new IntermittentSound(audioBuffers[17], 0.1, 1.5, 7, 12, 0.35, 0.5);
+			staVivlia.connect(phraseGainNode);
+			staVivlia.play();
+			intermittentSounds.push(staVivlia);
 			break;
 	}
-	
 }
 
 function pollForChanges() {
@@ -663,6 +703,9 @@ function getCues() {
 								buttonDeactivated(cueIndex);
 							}
 						} else {
+							for (intermittentSound in intermittentSounds) {
+								intermittentSound.stop();
+							}
 							//alert("Start panicking!");
 						}
 					}
