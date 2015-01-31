@@ -703,10 +703,14 @@ function getCues() {
 								buttonDeactivated(cueIndex);
 							}
 						} else {
-							for (intermittentSound in intermittentSounds) {
-								intermittentSound.stop();
-							}
 							//alert("Start panicking!");
+							for (var i = 0; i < intermittentSounds.length; i++) {
+								intermittentSounds[i].stop();
+								//alert(intermittentSounds[i]);
+							}
+							for (var i = 0; i < delayedSounds.length; i++) {
+								window.clearTimeout(delayedSounds[i]);
+							}
 						}
 					}
 				}
