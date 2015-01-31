@@ -43,6 +43,7 @@ Thanks for your participation!
 </div>
 
 <script src="scripts/BufferLoader.js"></script>
+<script src="scripts/IntermittentSound.js"></script>
 <script type="text/javascript">
 
 // buttons and cues setup...
@@ -114,7 +115,7 @@ var buttons = document.getElementById("buttons");
 for (var i = 0; i < numberOfButtons; i++) {
 	var button = document.createElement("button");
 	button.setAttribute("id", "play" + i);
-	button.setAttribute("disabled", true);
+	//button.setAttribute("disabled", true);
 	button.setAttribute("class", "off");
 	//button.innerHTML = "Off";
 	button.innerHTML = buttonTexts[i];
@@ -190,7 +191,7 @@ function playGranularTone(bufferToPlay, minToneDuration, maxToneDuration, grainI
 // list of pitches
 //playGranularPhrase:0, 3, 0.5, 6., 10., 2, 3, 0.2, 1., 1.2, 0.5, 0.75, 0, [9./8., 1., 7./6.]
 
-// creating an intermittentSound object with an object constructor
+// creating a GranularPhrase object with an object constructor
 function GranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, phraseDur, pitchArray) {
 	// ok, get this: if there's a phraseDur, we use that to determine when the phrase will end;
 	// otherwise we rely on min/max Reps.
@@ -380,23 +381,7 @@ function tickDownIntermittentSound(intermittentSoundIndex) {
 	intermittentSounds[intermittentSoundIndex].numberOfReps--;
 }
 
-// creating an intermittentSound object with an object constructor
-function IntermittentSound(index, buffer, minPause, maxPause, minReps, maxReps, minVol, maxVol) {
-	this.index = index;
-	this.buffer = buffer;
-	this.minPause = minPause;
-	this.maxPause = maxPause;
-	this.minReps = minReps;
-	this.maxReps = maxReps;
-	this.minVol = minVol;
-	this.maxVol = maxVol;
-	this.numberOfReps = Math.floor(((maxReps - minReps) + 1) * Math.random() + minReps);
-}
 
-IntermittentSound.prototype.playIntermittentSound = function() {
-	//playBuffer(1);
-	tickDownIntermittentSound(this.index);
-}
 
 
 // polling and triggering stuff...
@@ -438,9 +423,9 @@ function buttonActivated(index) {
 		case 3:
 			//Λυσία 1
 			//setSoundParams:(long)sender.tag, 0.1, 1.25, 4, 7, 0.35, 0.5, 1, 0
-			var soundId = 0;
-			intermittentSounds[soundId] = new IntermittentSound(soundId, 1, 0.1, 1.25, 4, 7, 0.35, 0.5);
-			intermittentSounds[soundId].playIntermittentSound();
+			//var Lysia1 = new IntermittentSound(0, 1, 0.1, 1.25, 4, 7, 0.35, 0.5);
+			var Lysia1 = new IntermittentSound(1, 0.1, 1.25, 2, 2, 0.35, 0.5);
+			Lysia1.playIntermittentSound();
 			break;
 		case 4:
 			//Λυσία 2
