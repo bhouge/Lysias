@@ -134,14 +134,14 @@ function updateCues(){
 	try{
 		// Opera 8.0+, Firefox, Safari
 		ajaxRequest = new XMLHttpRequest();
-	} catch (e){
+	} catch(e) {
 		// Internet Explorer Browsers
 		try{
 			ajaxRequest = new ActiveXObject("Msxml2.XMLHTTP");
-		} catch (e) {
+		} catch(e) {
 			try{
 				ajaxRequest = new ActiveXObject("Microsoft.XMLHTTP");
-			} catch (e){
+			} catch(e) {
 				// Something went wrong
 				alert("There appears to be a problem with your browser.");
 				return false;

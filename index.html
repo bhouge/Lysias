@@ -636,10 +636,8 @@ function buttonActivated(index) {
 }
 
 function pollForChanges(force) {
-	if (listenButton.className == "on") {
-		getCues(force);
-		window.setTimeout(pollForChanges, 1000., false);
-	}
+	getCues(force);
+	window.setTimeout(pollForChanges, 1000., false);
 }
 
 
