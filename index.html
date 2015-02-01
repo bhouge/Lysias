@@ -45,6 +45,7 @@ Thanks for your participation!
 
 <script src="scripts/BufferLoader.js"></script>
 <script src="scripts/IntermittentSound.js"></script>
+<script src="scripts/GranularPhrase.js"></script>
 <script type="text/javascript">
 
 // buttons and cues setup...
@@ -80,7 +81,9 @@ listenButton.onclick = function () {
 	if (listenButton.className == "off") {
 		listenButton.className = "on";
 		listenButton.innerHTML = "Stop Listening";
-		pollForChanges(false);
+		pollForChanges(true);
+		// I guess this is pretty hacky, but sometimes the message doesn't seem to get through...
+		window.setTimeout(getCues, 3500., true);
 	} else {
 		listenButton.className = "off";
 		listenButton.innerHTML = "Listen";
@@ -98,7 +101,7 @@ listenButton.onclick = function () {
 var nudgeButton = document.getElementById("nudge");
 
 nudgeButton.onclick = function () {
-	pollForChanges(true);
+	getCues(true);
 }
 
 var buttonTexts = ["Πλησιέστατα",
@@ -372,34 +375,6 @@ function playGrain(bufferToPlay, grainDuration, pitchMultiplier, volume) {
 var intermittentSounds = [];
 var delayedSounds = [];
 
-/* 
-// moving to IntermittentSound.js 
-
-function playBuffer(bufferIndex, volume) {
-	var audioBufferSource = audioCtx.createBufferSource();
-	audioBufferSource.buffer = audioBuffers[bufferIndex];
-	//Ah, looks like we've got a vestigial global gain here that the grain stuff ignores
-	//Would be good to have global gain nodes for granular synthesis and intermittent sounds
-	audioBufferGain = audioCtx.createGain();
-	audioBufferGain.gain.value = volume;
-	audioBufferSource.connect(audioBufferGain);
-	audioBufferGain.connect(phraseGainNode);
-	audioBufferSource.start();
-}
-
-function tickDownIntermittentSound(intermittentSoundIndex) {
-	var volume = (intermittentSounds[intermittentSoundIndex].maxVol - intermittentSounds[intermittentSoundIndex].minVol) * Math.random() + intermittentSounds[intermittentSoundIndex].minVol;
-	playBuffer(intermittentSounds[intermittentSoundIndex].buffer, volume);
-	var bufferDur = audioBuffers[intermittentSounds[intermittentSoundIndex].buffer].duration;
-	if (intermittentSounds[intermittentSoundIndex].numberOfReps > 0 && cues2Play.panic != "yes") {
-		var pauseDur = (intermittentSounds[intermittentSoundIndex].maxPause - intermittentSounds[intermittentSoundIndex].minPause) * 
-		Math.random() + intermittentSounds[intermittentSoundIndex].minPause;
-		window.setTimeout(tickDownIntermittentSound, (pauseDur + bufferDur) * 1000., intermittentSoundIndex);
-	}
-	intermittentSounds[intermittentSoundIndex].numberOfReps--;
-}
-*/
-
 
 
 
@@ -473,7 +448,7 @@ function buttonActivated(index) {
 			grammatikon.connect(phraseGainNode);
 			//alert("hello?");
 			grammatikon.play();
-			//var meow = intermittentSounds.push(grammatikon);
+			intermittentSounds.push(grammatikon);
 			//alert(intermittentSounds);
 			//alert(intermittentSounds[meow - 1])
 			break;
