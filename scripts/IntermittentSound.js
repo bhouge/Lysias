@@ -25,28 +25,18 @@ function IntermittentSound(buffer, minPause, maxPause, minReps, maxReps, minVol,
 	var that = this;
 	
 	function playBuffer(bufferIndex, volume) {
-		//alert("insideplayBuffer");
+		//somewhere in here we should probably error check to make sure an outputNode with an audioContext is connected
 		var audioBufferSource = that.outputNode.context.createBufferSource();
-		//alert(audioBufferSource);
 		audioBufferSource.buffer = bufferIndex;
-		//alert(audioBufferSource.buffer);
-		//alert(that.outputNode);
-		//alert(that.outputNode.context);
 		audioBufferGain = that.outputNode.context.createGain();
-		//alert(audioBufferGain);
 		audioBufferGain.gain.value = volume;
-		//alert(audioBufferGain.gain);
 		audioBufferSource.connect(audioBufferGain);
-		//alert(audioBufferSource);
 		audioBufferGain.connect(that.outputNode);
-		//alert("did we get this far?");
 		try {
 			audioBufferSource.start(0., 0., audioBufferSource.buffer.duration);
 		} catch(e) {
 			alert(e);
-		}
-		//alert("so now we should have started playing...");
-		
+		}		
 	}
 	
 	// making this a private member function
@@ -84,15 +74,14 @@ function IntermittentSound(buffer, minPause, maxPause, minReps, maxReps, minVol,
 	this.connect = function(nodeToConnectTo) {
 		//alert("inside the connect method");
 		try {
-			this.outputNode = nodeToConnectTo;
-			//alert("setting output node to specified node");
-		} catch(e) {
-			//alert("setting output node to destination");
 			if (nodeToConnectTo.destination) {
 				this.outputNode = nodeToConnectTo.destination;
 			} else {
-				alert("It seems you have not specified a valid node.");
+				this.outputNode = nodeToConnectTo;
 			}
+			//alert("setting output node to specified node");
+		} catch(e) {
+			alert("It seems you have not specified a valid node.");
 		}
 	}
 }

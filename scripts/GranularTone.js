@@ -17,62 +17,138 @@
 //playGranularPhrase:0, 3, 0.5, 6., 10., 2, 3, 0.2, 1., 1.2, 0.5, 0.75, 0, [9./8., 1., 7./6.]
 
 // creating a GranularPhrase object with an object constructor
-function GranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, phraseDur, pitchArray) {
+function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, pitch) {
 	// ok, get this: if there's a phraseDur, we use that to determine when the phrase will end;
 	// otherwise we rely on min/max Reps.
-	this.index = granularPhraseIndex;
+	this.buffer = buffer;
 	this.minToneDur = minToneDur;
 	this.maxToneDur = maxToneDur;
-	this.minReps = minReps;
-	this.maxReps = maxReps;
+	this.toneDur;
 	this.grainInterval = grainInterval;
 	this.minGrainDur = minGrainDur;
 	this.maxGrainDur = maxGrainDur;
 	this.minVol = minVol;
 	this.maxVol = maxVol;
-	this.octaveShift = octaveShift;
-	this.phraseDur = phraseDur;
-	this.pitchArray = pitchArray.sort();
+	this.outputNode;
+	this.grainWindow = (function() {
+		//Set half sine up as default, but allow it to be overridden
+		var grainWindow;
+		var grainWindowLength = 16384;
+		grainWindow = new Float32Array(grainWindowLength);
+		for (var i = 0; i < grainWindowLength; ++i)
+		    grainWindow[i] = Math.sin(Math.PI * i / grainWindowLength);
+		return grainWindow;
+	})();
+
+	// this should all be made private
+	this.pitchArray = [];
+	if (typeof(pitch) == 'number') {
+		this.pitchArray.push(pitch);
+	} else {
+		this.pitchArray = pitchArray.sort();
+	}
+	this.currentPitch;
 	this.lastPitch = 0.;
+	
+	// remember, we do this so that we can access member variables in private functions
+	// http://www.crockford.com/javascript/private.html
+	var that = this;
+	
+	function playGrain(bufferToPlay, grainDuration, pitchMultiplier, volume) {
+		// this will be in seconds, adjusted for pitch
+		var bufferDuration = (bufferToPlay.length/bufferToPlay.sampleRate)/pitchMultiplier;
+		var startTime;
+		if (grainDuration > bufferDuration) {
+			grainDuration = bufferDuration;
+			startTime = 0;
+		} else {
+			startTime = (bufferDuration - grainDuration) * Math.random() * pitchMultiplier;
+		}
+		
+		var context = that.outputNode.context;
+		var fileNode = context.createBufferSource();
+		var gainNode = context.createGain();
+		var gainNode2 = context.createGain();
+		gainNode.connect(gainNode2);
+		gainNode2.connect(that.outputNode);
+		gainNode2.gain.value = volume;
+		fileNode.buffer = bufferToPlay;	
+		fileNode.connect(gainNode);
+		fileNode.playbackRate.value = pitchMultiplier;
+		
+		// delay before starting, time into buffer, duration of excerpt
+		fileNode.start(0., startTime, grainDuration * pitchMultiplier);
+		
+		//gainNode.gain.value = 0.;
+		gainNode.gain.setValueCurveAtTime(that.grainWindow, 0., grainDuration);
+	}
+	
+	function scheduledGrainPlayer() {
+		// play grain
+		// calculate next grain time
+		// if next grain time < toneEndTime, schedule next grain
+		
+		// kind of silly that some of the randomization is being done in the playGrain function,
+		// while other randomization is being done here...
+
+		var grainDensity = 1. / that.grainInterval;
+		var grainDuration = (that.maxGrainDur - that.minGrainDur) * Math.random() + that.minGrainDur;
+		var volume = (that.maxVol - that.minVol) * Math.random() + that.minVol;
+		playGrain(that.buffer, grainDuration, that.currentPitch, volume);
+		//remember, all in seconds...
+		//var timeToNextGrain = (2. * grainInterval) * Math.random();
+		var timeToNextGrain = that.grainInterval;
+		var nextGrainTime = that.outputNode.context.currentTime + timeToNextGrain;
+		//  && cues2Play.panic != "yes"
+		if (nextGrainTime < that.targetTime) {
+			//remember, setTimeout wants ms...
+			var timeToNextGrainInMs = timeToNextGrain * 1000.;
+			if (timeToNextGrainInMs < 10.) {
+				timeToNextGrainInMs = 10.;
+			}
+			// ran into problems pasing variables and then realized I don't have to!
+			var timeoutID = window.setTimeout(scheduledGrainPlayer, timeToNextGrainInMs);
+		}
+	}
+	
+	this.connect = function(nodeToConnectTo) {
+		//alert("inside the connect method");
+		try {
+			if (nodeToConnectTo.destination) {
+				this.outputNode = nodeToConnectTo.destination;
+			} else {
+				this.outputNode = nodeToConnectTo;
+			}
+			//alert("setting output node to specified node");
+		} catch(e) {
+			alert("It seems you have not specified a valid node.");
+		}
+	}
+	
+	this.play = function() {
+		//note that these are in seconds
+		this.toneDur = (this.maxToneDur - this.minToneDur) * Math.random() + this.minToneDur;
+		this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
+		that.startTime = this.outputNode.context.currentTime;
+		//that.realTime = startTime;
+		this.targetTime = that.startTime + this.toneDur;
+		//bufferToPlay, minGrainDur, maxGrainDur, minVol, maxVol, pitchMultiplier, grainInterval, targetTime
+		//scheduledGrainPlayer(this.buffer, this.minGrainDur, this.maxGrainDur, this.minVol, this.maxVol, this.currentPitch, this.grainInterval, this.targetTime);
+		scheduledGrainPlayer();
+		return this.toneDur;
+	}
+	
+	/*
+	// this should be put where it will be used right away
 	this.numberOfReps = Math.floor(((maxReps - minReps) + 1) * Math.random() + minReps);
 	this.octaveMultiplier = 1 + Math.floor((octaveShift + 1) * Math.random());
 	if (this.octaveMultiplier > 1.) {
 		this.minVol *= 0.5;
 		this.maxVol *= 0.5;
 	}
-	this.targetTime = audioCtx.currentTime + phraseDur;
+	*/
 }
 
-//What do I want to send it?
-//buffer to use, duration, pitch
-//then let it pick an appropriate subsection
-function playGrain(bufferToPlay, grainDuration, pitchMultiplier, volume) {
-	// this will be in seconds, adjusted for pitch
-	var bufferDuration = (bufferToPlay.length/bufferToPlay.sampleRate)/pitchMultiplier;
-	var startTime;
-	if (grainDuration > bufferDuration) {
-		grainDuration = bufferDuration;
-		startTime = 0;
-	} else {
-		startTime = (bufferDuration - grainDuration) * Math.random() * pitchMultiplier;
-	}
-	
-	var fileNode = audioCtx.createBufferSource();
-	var gainNode = audioCtx.createGain();
-	var gainNode2 = audioCtx.createGain();
-	gainNode.connect(gainNode2);
-	gainNode2.connect(grainGainNode);
-	gainNode2.gain.value = volume;
-	fileNode.buffer = bufferToPlay;	
-	fileNode.connect(gainNode);
-	fileNode.playbackRate.value = pitchMultiplier;
-	
-	// delay before starting, time into buffer, duration of excerpt
-	fileNode.start(0., startTime, grainDuration * pitchMultiplier);
-	
-	//gainNode.gain.value = 0.;
-	gainNode.gain.setValueCurveAtTime(grainWindow, 0., grainDuration);
-}
 
 function playGranularTone(bufferToPlay, minToneDuration, maxToneDuration, grainInterval, minGrainDur, maxGrainDur, pitchMultiplier, minVol, maxVol) {
 	//note that these are in seconds
@@ -86,10 +162,15 @@ function playGranularTone(bufferToPlay, minToneDuration, maxToneDuration, grainI
 	return toneDuration;
 }
 
-GranularPhrase.prototype.playGranularPhrase = function() {
+
+//buffer, duration, pitch, volume
+//playGrain(this.buffer, 1., 1., 1.);
+
+
+
+GranularTone.prototype.playGranularPhrase = function() {
 	tickDownGranularPhrase(this.index);
 }
-
 
 function tickDownGranularPhrase(granularPhraseIndex) {
 	var phraseToPlay = granularPhrases[granularPhraseIndex];
@@ -149,43 +230,6 @@ function playGranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps
 function playGranularDescendingPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, pitchArray) {
 	granularPhrases[granularPhraseIndex] = new GranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, pitchArray);
 	granularPhrases[granularPhraseIndex].playGranularPhrase();
-}
-
-
-function scheduledGrainPlayer(bufferToPlay, minGrainDur, maxGrainDur, minVol, maxVol, pitchMultiplier, grainInterval, targetTime) {
-	// play grain
-	// calculate next grain time
-	// if next grain time < toneEndTime, schedule next grain
-	
-	// kind of silly that some of the randomization is being done in the playGrain function,
-	// while other randomization is being done here...
-
-	var grainDensity = 1. / grainInterval;
-	var grainDuration = (maxGrainDur - minGrainDur) * Math.random() + minGrainDur;
-	var volume = (maxVol - minVol) * Math.random() + minVol;
-	playGrain(bufferToPlay, grainDuration, pitchMultiplier, volume);
-	//remember, all in seconds...
-	//var timeToNextGrain = (2. * grainInterval) * Math.random();
-	var timeToNextGrain = grainInterval;
-	var nextGrainTime = audioCtx.currentTime + timeToNextGrain;
-	if (nextGrainTime < targetTime && cues2Play.panic != "yes") {
-		var scheduleString = "scheduledGrainPlayer(" +
-		"audioBuffers[0]" + ", " +
-		minGrainDur + ", " +
-		maxGrainDur + ", " +
-		minVol + ", " +
-		maxVol + ", " +
-		pitchMultiplier + ", " +
-		grainInterval + ", " +
-		targetTime + ")";
-		//alert(scheduleString);
-		//remember, setTimeout wants ms...
-		var timeToNextGrainInMs = timeToNextGrain * 1000.;
-		if (timeToNextGrainInMs < 10.) {
-			timeToNextGrainInMs = 10.;
-		}
-		var timeoutID = window.setTimeout(scheduleString, timeToNextGrainInMs);
-	}
 }
 
 

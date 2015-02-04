@@ -68,14 +68,13 @@ listenButton.onclick = function () {
 		// delay before starting, time into buffer, duration of excerpt
 		fileNode.start(audioCtx.currentTime + 0.1, 0.1, 1.);
 		
-		var oscNode = audioCtx.createOscillator();
-		oscNode.connect(gainNode);
-		//oscNode.start();
-		var audioBufferNode = audioCtx.createBufferSource();
-		audioBufferNode.buffer = audioBuffers[0];
-		audioBufferNode.connect(gainNode);
+		//var audioBufferNode = audioCtx.createBufferSource();
+		//audioBufferNode.buffer = audioBuffers[0];
+		//audioBufferNode.connect(gainNode);
 		//audioBufferNode.start();
-		gainNode.gain.setValueCurveAtTime(grainWindow, audioCtx.currentTime + 0.1, 1.);
+		//gainNode.gain.setValueCurveAtTime(grainWindow, audioCtx.currentTime + 0.1, 1.);
+		
+		
 		listenButtonPressed = true;
 	}
 	if (listenButton.className == "off") {
@@ -186,16 +185,6 @@ var intermittentSounds = [];
 var delayedSounds = [];
 
 
-//I am thinking that we set this up as a default but allow it to be overridden
-
-//grain window stuff
-var grainWindow;
-var grainWindowLength = 16384;
-grainWindow = new Float32Array(grainWindowLength);
-for (var i = 0; i < grainWindowLength; ++i)
-    grainWindow[i] = Math.sin(Math.PI * i / grainWindowLength);
-
-
 // polling and triggering stuff...
 
 function buttonDeactivated(index) {
@@ -220,7 +209,10 @@ function buttonActivated(index) {
 			//Πλησιέστατα
 			//playGranularSound:0: 0, 1.0, 55., 65., 0.2, 1., 1.2, 1.,   1.,   0.8,  1.
 			//playGranularTone(bufferToPlay, toneDurationMin, toneDurationMax, grainInterval, minGrainDur, maxGrainDur, pitchMultiplier)
-			playGranularTone(audioBuffers[0], 55., 65., 0.2, 1., 1.2, 1., 0.8, 1.);
+			var tone01 = new GranularTone(audioBuffers[0], 55., 65., 0.2, 1., 1.2, 0.8, 1., 1.);
+			tone01.connect(grainGainNode);
+			tone01.play();
+			//playGranularTone(audioBuffers[0], 55., 65., 0.2, 1., 1.2, 1., 0.8, 1.);
       		break;
 		case 1:
 			//στην βιβλιοθήκη
