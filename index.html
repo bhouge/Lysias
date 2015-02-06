@@ -87,13 +87,7 @@ listenButton.onclick = function () {
 		listenButton.className = "off";
 		listenButton.innerHTML = "Listen";
 		//alert(intermittentSounds);
-		for (var i = 0; i < intermittentSounds.length; i++) {
-			intermittentSounds[i].stop();
-			//alert(intermittentSounds[i]);
-		}
-		for (var i = 0; i < delayedSounds.length; i++) {
-			window.clearTimeout(delayedSounds[i]);
-		}
+		stopEverything();
 	}
 }
 
@@ -132,7 +126,7 @@ var buttons = document.getElementById("buttons");
 for (var i = 0; i < numberOfButtons; i++) {
 	var button = document.createElement("button");
 	button.setAttribute("id", "play" + i);
-	//button.setAttribute("disabled", true);
+	button.setAttribute("disabled", true);
 	button.setAttribute("class", "off");
 	//button.innerHTML = "Off";
 	button.innerHTML = buttonTexts[i];
@@ -178,6 +172,7 @@ phraseGainNode.gain.value = 1.;
 
 var startTime, realTime, targetTime;
 var timerID;
+var granularTones = [];
 var granularPhrases = [];
 
 //intermittent sound stuff...
@@ -212,17 +207,26 @@ function buttonActivated(index) {
 			var tone01 = new GranularTone(audioBuffers[0], 55., 65., 0.2, 1., 1.2, 0.8, 1., 1.);
 			tone01.connect(grainGainNode);
 			tone01.play();
+			granularTones.push(tone01);
 			//playGranularTone(audioBuffers[0], 55., 65., 0.2, 1., 1.2, 1., 0.8, 1.);
       		break;
 		case 1:
 			//στην βιβλιοθήκη
 			//playGranularSound:0, 1, 0.5, 40., 46., 0.2, 1., 1.2, 0.5,  0.5,  0.3,  0.4
-			playGranularTone(audioBuffers[0], 40., 46., 0.2, 1., 1.2, 0.5, 0.3, 0.4);
+			//playGranularTone(audioBuffers[0], 40., 46., 0.2, 1., 1.2, 0.5, 0.3, 0.4);
+			var tone02 = new GranularTone(audioBuffers[0], 40., 46., 0.2, 1., 1.2, 0.3, 0.4, 0.5);
+			tone02.connect(grainGainNode);
+			tone02.play();
+			granularTones.push(tone02);
 			break;
 		case 2:
 			//θάψαμε
 			//playGranularSound:0, 2, 0.5, 45., 50., 0.2, 1., 1.2, 0.75, 0.75, 0.15, 0.3
-			playGranularTone(audioBuffers[0], 45., 50., 0.2, 1., 1.2, 0.75, 0.15, 0.3);
+			//playGranularTone(audioBuffers[0], 45., 50., 0.2, 1., 1.2, 0.75, 0.15, 0.3);
+			var tone03 = new GranularTone(audioBuffers[0], 45., 50., 0.2, 1., 1.2, 0.15, 0.3, 0.75);
+			tone03.connect(grainGainNode);
+			tone03.play();
+			granularTones.push(tone03);
 			break;
 		case 3:
 			//Λυσία 1
@@ -252,15 +256,10 @@ function buttonActivated(index) {
 		case 6:
 			//γραμματικόν
 			//setSoundParams:(long)sender.tag, 0.1, 1., 3, 4, 0.35, 0.5, 1, 0
-			//alert(audioCtx);
 			var grammatikon = new IntermittentSound(audioBuffers[4], 0.1, 1., 3, 4, 0.35, 0.5);
-			//alert(grammatikon);
 			grammatikon.connect(phraseGainNode);
-			//alert("hello?");
 			grammatikon.play();
 			intermittentSounds.push(grammatikon);
-			//alert(intermittentSounds);
-			//alert(intermittentSounds[meow - 1])
 			break;
 		case 7:
 			//Ο χώρος 
@@ -268,12 +267,20 @@ function buttonActivated(index) {
 			//playGranularPhrase:0, 3, 0.5, 6., 10., 2, 3, 0.2, 1., 1.2, 0.5, 0.75, 0, [9./8., 1., 7./6.]
 			window.setTimeout("playGranularPhrase(audioBuffers[0], 6., 10., 2, 3, 0.3, 1., 1.2, 0.35, 0.5, 0, 0., [9./8., 1., 7./6.])", 1000.);
 			//playGranularSound:0, 2, 0.5, 35., 45., 0.2, 1., 1.2, 0.75, 0.75, 0.35, 0.5
-			playGranularTone(audioBuffers[0], 35., 45., 0.5, 1., 1.2, 0.75, 0.35, 0.5);
+			//playGranularTone(audioBuffers[0], 35., 45., 0.5, 1., 1.2, 0.75, 0.35, 0.5);
+			var tone04 = new GranularTone(audioBuffers[0], 35., 45., 0.5, 1., 1.2, 0.35, 0.5, 0.75);
+			tone04.connect(grainGainNode);
+			tone04.play();
+			granularTones.push(tone04);
 			break;
 		case 8:
 			//pre-σχόλια
 			//playGranularSound:0, 0, 0.5, 35., 45., 0.35, 1.5, 2., 0.375, 0.375, 0.35, 0.45
-			playGranularTone(audioBuffers[0], 35., 45., 0.5, 1.5, 2., 0.375, 0.35, 0.45);
+			//playGranularTone(audioBuffers[0], 35., 45., 0.5, 1.5, 2., 0.375, 0.35, 0.45);
+			var tone05 = new GranularTone(audioBuffers[0], 35., 45., 0.5, 1.5, 2., 0.35, 0.45, 0.375);
+			tone05.connect(grainGainNode);
+			tone05.play();
+			granularTones.push(tone05);
 			break;
 		case 9:
 			//σχόλια
@@ -286,7 +293,11 @@ function buttonActivated(index) {
 		case 10:
 			//κείμενα
 			//playGranularSound:0, 1, 0.5, 40., 50., 0.2, 0.8, 1.1, 0.9375, 0.9375, 0.25, 0.35
-			delayedSounds.push(window.setTimeout("playGranularTone(audioBuffers[0], 40., 50., 0.2, 0.8, 1.1, 0.9375, 0.25, 0.35)", 1550.));
+			//delayedSounds.push(window.setTimeout("playGranularTone(audioBuffers[0], 40., 50., 0.2, 0.8, 1.1, 0.9375, 0.25, 0.35)", 1550.));
+			var tone08 = new GranularTone(audioBuffers[0], 40., 50., 0.2, 0.8, 1.1, 0.25, 0.35, 0.9375);
+			tone08.connect(grainGainNode);
+			var soundID = granularTones.push(tone08) - 1;
+			delayedSounds.push(window.setTimeout("granularTones[" + soundID + "].play()", 1550.));
 			//setSoundParams:(long)sender.tag, 0.1, 1.5, 7, 10, 0.35, 0.5, 1, 0
 			var keimena = new IntermittentSound(audioBuffers[6], 0.1, 1.5, 7, 10, 0.35, 0.5);
 			keimena.connect(phraseGainNode);
@@ -312,7 +323,11 @@ function buttonActivated(index) {
 		case 13:
 			//εις τεύχη ελληνισμών
 			//playGranularSound:0, 3, 0.5, 25., 35., 0.25, 1.5, 2., 1./3., 1./3., 0.2, 0.3
-			delayedSounds.push(window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.25, 1.5, 2, (1./3.), 0.2, 0.3)", 1550.));
+			//delayedSounds.push(window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.25, 1.5, 2, (1./3.), 0.2, 0.3)", 1550.));
+			var tone07 = new GranularTone(audioBuffers[0], 25., 35., 0.25, 1.5, 2., 0.2, 0.3, (1./3.));
+			tone07.connect(grainGainNode);
+			var soundID = granularTones.push(tone07) - 1;
+			delayedSounds.push(window.setTimeout("granularTones[" + soundID + "].play();", 1550.));
 			//setSoundParams:(long)sender.tag, 0.1, 1., 1, 3, 0.35, 0.5, 1, 0
 			var eisTevchiEllinismon = new IntermittentSound(audioBuffers[9], 0.1, 1., 1, 3, 0.35, 0.5);
 			eisTevchiEllinismon.connect(phraseGainNode);
@@ -322,7 +337,11 @@ function buttonActivated(index) {
 		case 14:
 			//πολλή ερμηνεία
 			//playGranularSound:0, 2, 0.5, 25., 35., 0.2, 0.8, 1., 1.25, 1.25, 0.1, 0.2
-			delayedSounds.push(window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.2, 0.8, 1, 1.25, 0.1, 0.2)", 1950.));
+			//delayedSounds.push(window.setTimeout("playGranularTone(audioBuffers[0], 25., 35., 0.2, 0.8, 1, 1.25, 0.1, 0.2)", 1950.));
+			var tone08 = new GranularTone(audioBuffers[0], 25., 35., 0.2, 0.8, 1., 0.1, 0.2, 1.25);
+			tone08.connect(grainGainNode);
+			var soundID = granularTones.push(tone08) - 1;
+			delayedSounds.push(window.setTimeout("granularTones[" + soundID + "].play()", 1950.));
 			//setSoundParams:(long)sender.tag, 0.1, 0.5, 1, 3, 0.35, 0.5, 1, 0
 			var polliErmineia = new IntermittentSound(audioBuffers[10], 0.1, 0.5, 1, 3, 0.35, 0.5);
 			polliErmineia.connect(phraseGainNode);
@@ -332,7 +351,11 @@ function buttonActivated(index) {
 		case 15:
 			//pre-Κ’επίσης
 			//playGranularSound:0, 0, 0.5, 35., 45., 0.3, 1.5, 2., 1./3., 1./3., 0.35, 0.5
-			playGranularTone(audioBuffers[0], 35., 45., 0.3, 1.5, 2., (1./3.), 0.35, 0.5);
+			//playGranularTone(audioBuffers[0], 35., 45., 0.3, 1.5, 2., (1./3.), 0.35, 0.5);
+			var tone06 = new GranularTone(audioBuffers[0], 35., 45., 0.3, 1.5, 2., 0.35, 0.5, (1./3.));
+			tone06.connect(grainGainNode);
+			tone06.play();
+			granularTones.push(tone06);
 			break;
 		case 16:
 			//Κ’επίσης
@@ -420,11 +443,23 @@ function buttonActivated(index) {
 	}
 }
 
+function stopEverything() {
+	for (var i = 0; i < intermittentSounds.length; i++) {
+		intermittentSounds[i].stop();
+		//alert(intermittentSounds[i]);
+	}
+	for (var i = 0; i < delayedSounds.length; i++) {
+		window.clearTimeout(delayedSounds[i]);
+	}
+	for (var i = 0; i < granularTones.length; i++) {
+		granularTones[i].stop();
+	}
+}
+
 function pollForChanges(force) {
 	getCues(force);
 	window.setTimeout(pollForChanges, 1000., false);
 }
-
 
 // network and file loading stuff
 var audioBuffers = [];
@@ -515,13 +550,7 @@ function getCues(force) {
 									}
 								} else {
 									//alert("Start panicking!");
-									for (var i = 0; i < intermittentSounds.length; i++) {
-										intermittentSounds[i].stop();
-										//alert(intermittentSounds[i]);
-									}
-									for (var i = 0; i < delayedSounds.length; i++) {
-										window.clearTimeout(delayedSounds[i]);
-									}
+									stopEverything();
 								}
 							}
 						}

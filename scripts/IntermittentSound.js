@@ -16,9 +16,13 @@ function IntermittentSound(buffer, minPause, maxPause, minReps, maxReps, minVol,
 	this.maxReps = maxReps;
 	this.minVol = minVol;
 	this.maxVol = maxVol;
-	this.numberOfInputs = 0;
+	//what was this for?
+	//this.numberOfInputs = 0;
 	this.outputNode;
-	this.isPlaying;
+	this.isPlaying = false;
+	
+	// private variables
+	var timerID;
 	// Douglas Crockford told me to do this: http://www.crockford.com/javascript/private.html
 	// It's a convention that allows private member functions to access the object
 	// due to an error in the ECMAScript Language Specification
@@ -50,9 +54,9 @@ function IntermittentSound(buffer, minPause, maxPause, minReps, maxReps, minVol,
 		//alert("bufferDur=" + bufferDur);
 		// ok, this will need to be replaced by having a stop message that will stop execution...
 		if (that.numberOfReps > 0 && that.isPlaying) {
-			var pauseDur = (that.maxPause - that.minPause) * 
-			Math.random() + that.minPause;
-			that.timerID = window.setTimeout(tickDownIntermittentSound, (pauseDur + bufferDur) * 1000.);
+			var pauseDur = (that.maxPause - that.minPause) * Math.random() + that.minPause;
+			timerID = window.setTimeout(tickDownIntermittentSound, (pauseDur + bufferDur) * 1000.);
+			//alert("calling it again");
 		}
 		that.numberOfReps--;
 	}
@@ -68,7 +72,7 @@ function IntermittentSound(buffer, minPause, maxPause, minReps, maxReps, minVol,
 	
 	this.stop = function() {
 		this.isPlaying = false;
-		window.clearTimeout(this.timerID); 
+		window.clearTimeout(timerID); 
 	}
 	
 	this.connect = function(nodeToConnectTo) {

@@ -30,6 +30,7 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 	this.minVol = minVol;
 	this.maxVol = maxVol;
 	this.outputNode;
+	this.isPlaying = false;
 	this.grainWindow = (function() {
 		//Set half sine up as default, but allow it to be overridden
 		var grainWindow;
@@ -50,6 +51,7 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 	this.currentPitch;
 	this.lastPitch = 0.;
 	
+	var timerID;
 	// remember, we do this so that we can access member variables in private functions
 	// http://www.crockford.com/javascript/private.html
 	var that = this;
@@ -100,14 +102,14 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 		var timeToNextGrain = that.grainInterval;
 		var nextGrainTime = that.outputNode.context.currentTime + timeToNextGrain;
 		//  && cues2Play.panic != "yes"
-		if (nextGrainTime < that.targetTime) {
+		if (nextGrainTime < that.targetTime && that.isPlaying) {
 			//remember, setTimeout wants ms...
 			var timeToNextGrainInMs = timeToNextGrain * 1000.;
 			if (timeToNextGrainInMs < 10.) {
 				timeToNextGrainInMs = 10.;
 			}
 			// ran into problems pasing variables and then realized I don't have to!
-			var timeoutID = window.setTimeout(scheduledGrainPlayer, timeToNextGrainInMs);
+			timerID = window.setTimeout(scheduledGrainPlayer, timeToNextGrainInMs);
 		}
 	}
 	
@@ -126,6 +128,7 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 	}
 	
 	this.play = function() {
+		this.isPlaying = true;
 		//note that these are in seconds
 		this.toneDur = (this.maxToneDur - this.minToneDur) * Math.random() + this.minToneDur;
 		this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
@@ -136,6 +139,11 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 		//scheduledGrainPlayer(this.buffer, this.minGrainDur, this.maxGrainDur, this.minVol, this.maxVol, this.currentPitch, this.grainInterval, this.targetTime);
 		scheduledGrainPlayer();
 		return this.toneDur;
+	}
+	
+	this.stop = function() {
+		this.isPlaying = false;
+		window.clearTimeout(timerID); 
 	}
 	
 	/*
@@ -149,7 +157,7 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 	*/
 }
 
-
+/*
 function playGranularTone(bufferToPlay, minToneDuration, maxToneDuration, grainInterval, minGrainDur, maxGrainDur, pitchMultiplier, minVol, maxVol) {
 	//note that these are in seconds
 	var toneDuration = (maxToneDuration - minToneDuration) * Math.random() + minToneDuration;
@@ -161,7 +169,7 @@ function playGranularTone(bufferToPlay, minToneDuration, maxToneDuration, grainI
 	scheduledGrainPlayer(bufferToPlay, minGrainDur, maxGrainDur, minVol, maxVol, pitchMultiplier, grainInterval, targetTime);
 	return toneDuration;
 }
-
+*/
 
 //buffer, duration, pitch, volume
 //playGrain(this.buffer, 1., 1., 1.);
