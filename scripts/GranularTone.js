@@ -40,6 +40,7 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 		    grainWindow[i] = Math.sin(Math.PI * i / grainWindowLength);
 		return grainWindow;
 	})();
+	this.targetTime;
 
 	// this should all be made private
 	this.pitchArray = [];
@@ -50,15 +51,16 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 	}
 	this.currentPitch;
 	this.lastPitch = 0.;
-	this.minReps;
-	this.maxReps;
-	this.phraseDur;
+	this.minReps = 0;
+	this.maxReps = 0;
+	this.phraseDur = 0.;
 	
 	var grainTimerID;
 	var phraseTimerID;
 	var numberOfReps;
-	var repsForDumbTest;
+	var descendingTargetTime;
 	var octaveMultiplier;
+	var isDescending;
 	// remember, we do this so that we can access member variables in private functions
 	// http://www.crockford.com/javascript/private.html
 	var that = this;
@@ -127,8 +129,11 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 		//alert(currentPhraseDur);
 		if (numberOfReps > 0) {
 			phraseTimerID = window.setTimeout(scheduledPhrasePlayer, currentPhraseDur * 1000.)
+			numberOfReps--;
+		} else if (that.outputNode.context.currentTime < descendingTargetTime || 
+				that.pitchArray.indexOf(that.lastPitch) != 0) {
+			phraseTimerID = window.setTimeout(scheduledPhrasePlayer, currentPhraseDur * 1000.)
 		}
-		numberOfReps--;
 	}
 	
 	this.connect = function(nodeToConnectTo) {
@@ -152,12 +157,27 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 		//this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
 		
 		if (this.pitchArray.length > 1) {
-			do {
-				this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
-			} while (this.currentPitch == this.lastPitch);
+			if (isDescending) {
+				if (this.lastPitch == this.pitchArray[0]) {
+					// pick any index except the first one
+					this.currentPitch = this.pitchArray[Math.floor((Math.random() * (this.pitchArray.length - 1))) + 1];
+				} else {
+					// pick any index that's less than the last one
+					var maxIndex = this.pitchArray.indexOf(this.lastPitch);
+					if (maxIndex <= 0) {
+						maxIndex = this.pitchArray.length;
+					}
+					var newIndex = Math.floor(Math.random() * maxIndex);
+					this.currentPitch = this.pitchArray[newIndex];
+				}
+			} else {
+				do {
+					this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
+				} while (this.currentPitch == this.lastPitch);
+			}
 			this.lastPitch = this.currentPitch;
 		} else {
-			this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
+			this.currentPitch = this.pitchArray[0];
 		}
 		
 		that.startTime = this.outputNode.context.currentTime;
@@ -170,8 +190,9 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 	}
 	
 	this.playRandomPhrase = function(minReps, maxReps, octaveShift) {
-		this.maxReps = maxReps;
+		isDescending = false;
 		this.minReps = minReps;
+		this.maxReps = maxReps;
 		this.phraseDur = 0.;
 		numberOfReps = Math.floor(((maxReps - minReps) + 1) * Math.random() + minReps);
 		octaveMultiplier = 1 + Math.floor((octaveShift + 1) * Math.random());
@@ -182,17 +203,22 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 		// here you call the thing that just needs to tick down
 		// yes, you should have one public function you call that initializes everything and calls the first event
 		// and subsequently that thing just keeps calling itself until some end state is met
-		repsForDumbTest = 3;
-		//stupidTest();
 		scheduledPhrasePlayer();
 	}
 	
-	function stupidTest() {
-		alert("meow");
-		if (repsForDumbTest > 0) {
-			window.setTimeout(stupidTest, 1000);
+	this.playDescendingPhrase = function(phraseDuration, octaveShift) {
+		isDescending = true;
+		this.minReps = 0;
+		this.maxReps = 0;
+		this.phraseDur = phraseDuration;
+		descendingTargetTime = this.outputNode.context.currentTime + phraseDuration;
+		numberOfReps = 0;
+		octaveMultiplier = 1 + Math.floor((octaveShift + 1) * Math.random());
+		if (octaveMultiplier > 1.) {
+			this.minVol *= 0.5;
+			this.maxVol *= 0.5;
 		}
-		repsForDumbTest--;
+		scheduledPhrasePlayer();
 	}
 
 	this.stop = function() {
