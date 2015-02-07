@@ -42,7 +42,7 @@ buttton {
     line-height: 2rem;
     padding: 1rem; 
     display: inline;
-    //opacity: 0.3;
+    /*opacity: 0.3;*/
     
     transition: 1s all;
     -webkit-transition: 1s all;
@@ -63,7 +63,7 @@ button {
     line-height: 2rem;
     padding: .5rem; 
     display: inline;
-    //opacity: 0.3;
+    /*opacity: 0.3;*/
     
     transition: 1s all;
     -webkit-transition: 1s all;
@@ -130,7 +130,7 @@ p {
     line-height: 2rem;
     padding: .5rem; 
     display: block;
-    //opacity: 0.3;
+    /*opacity: 0.3;*/
     
     transition: 1s all;
     -webkit-transition: 1s all;

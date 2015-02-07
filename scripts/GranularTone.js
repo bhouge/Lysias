@@ -46,12 +46,19 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 	if (typeof(pitch) == 'number') {
 		this.pitchArray.push(pitch);
 	} else {
-		this.pitchArray = pitchArray.sort();
+		this.pitchArray = pitch.sort();
 	}
 	this.currentPitch;
 	this.lastPitch = 0.;
+	this.minReps;
+	this.maxReps;
+	this.phraseDur;
 	
-	var timerID;
+	var grainTimerID;
+	var phraseTimerID;
+	var numberOfReps;
+	var repsForDumbTest;
+	var octaveMultiplier;
 	// remember, we do this so that we can access member variables in private functions
 	// http://www.crockford.com/javascript/private.html
 	var that = this;
@@ -109,8 +116,19 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 				timeToNextGrainInMs = 10.;
 			}
 			// ran into problems pasing variables and then realized I don't have to!
-			timerID = window.setTimeout(scheduledGrainPlayer, timeToNextGrainInMs);
+			grainTimerID = window.setTimeout(scheduledGrainPlayer, timeToNextGrainInMs);
+		} else {
+			that.isPlaying = false;
 		}
+	}
+	
+	function scheduledPhrasePlayer() {
+		var currentPhraseDur = that.play();
+		//alert(currentPhraseDur);
+		if (numberOfReps > 0) {
+			phraseTimerID = window.setTimeout(scheduledPhrasePlayer, currentPhraseDur * 1000.)
+		}
+		numberOfReps--;
 	}
 	
 	this.connect = function(nodeToConnectTo) {
@@ -131,7 +149,17 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 		this.isPlaying = true;
 		//note that these are in seconds
 		this.toneDur = (this.maxToneDur - this.minToneDur) * Math.random() + this.minToneDur;
-		this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
+		//this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
+		
+		if (this.pitchArray.length > 1) {
+			do {
+				this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
+			} while (this.currentPitch == this.lastPitch);
+			this.lastPitch = this.currentPitch;
+		} else {
+			this.currentPitch = this.pitchArray[Math.floor((Math.random() * this.pitchArray.length))];
+		}
+		
 		that.startTime = this.outputNode.context.currentTime;
 		//that.realTime = startTime;
 		this.targetTime = that.startTime + this.toneDur;
@@ -141,20 +169,38 @@ function GranularTone(buffer, minToneDur, maxToneDur, grainInterval, minGrainDur
 		return this.toneDur;
 	}
 	
-	this.stop = function() {
-		this.isPlaying = false;
-		window.clearTimeout(timerID); 
+	this.playRandomPhrase = function(minReps, maxReps, octaveShift) {
+		this.maxReps = maxReps;
+		this.minReps = minReps;
+		this.phraseDur = 0.;
+		numberOfReps = Math.floor(((maxReps - minReps) + 1) * Math.random() + minReps);
+		octaveMultiplier = 1 + Math.floor((octaveShift + 1) * Math.random());
+		if (octaveMultiplier > 1.) {
+			this.minVol *= 0.5;
+			this.maxVol *= 0.5;
+		}
+		// here you call the thing that just needs to tick down
+		// yes, you should have one public function you call that initializes everything and calls the first event
+		// and subsequently that thing just keeps calling itself until some end state is met
+		repsForDumbTest = 3;
+		//stupidTest();
+		scheduledPhrasePlayer();
 	}
 	
-	/*
-	// this should be put where it will be used right away
-	this.numberOfReps = Math.floor(((maxReps - minReps) + 1) * Math.random() + minReps);
-	this.octaveMultiplier = 1 + Math.floor((octaveShift + 1) * Math.random());
-	if (this.octaveMultiplier > 1.) {
-		this.minVol *= 0.5;
-		this.maxVol *= 0.5;
+	function stupidTest() {
+		alert("meow");
+		if (repsForDumbTest > 0) {
+			window.setTimeout(stupidTest, 1000);
+		}
+		repsForDumbTest--;
 	}
-	*/
+
+	this.stop = function() {
+		//alert("nothing is stopping this, is it?");
+		this.isPlaying = false;
+		window.clearTimeout(grainTimerID);
+		window.clearTimeout(phraseTimerID);
+	}
 }
 
 /*
@@ -171,6 +217,55 @@ function playGranularTone(bufferToPlay, minToneDuration, maxToneDuration, grainI
 }
 */
 
+function tickDownGranularPhrase() {
+		var phraseToPlay = granularPhrases[granularPhraseIndex];
+		// two different processes depending on whether it's descending or not
+		// and this is kind of horrible, but what determines this is whether we use min/maxReps to determine duration
+		// or whether we provide a phraseDur explicitly.
+		if (phraseToPlay.phraseDur) {
+			var pitchMultiplier;
+			if (phraseToPlay.lastPitch == phraseToPlay.pitchArray[0]) {
+				var newPitchIndex = Math.floor((phraseToPlay.pitchArray.length - 1) * Math.random()) + 1;
+				pitchMultiplier = phraseToPlay.pitchArray[newPitchIndex];
+			} else {
+				var tempArray = [];
+				var i;
+				for (i = 0; i < phraseToPlay.pitchArray.length; i++) {
+					if (phraseToPlay.pitchArray[i] < phraseToPlay.lastPitch || phraseToPlay.lastPitch == 0) {
+						tempArray[i] = phraseToPlay.pitchArray[i];
+					}
+				}
+				pitchMultiplier = tempArray[Math.floor(tempArray.length * Math.random())];
+			}
+			//play phrase
+			var toneDur = playGranularTone(phraseToPlay.index, phraseToPlay.minToneDur, phraseToPlay.maxToneDur, phraseToPlay.grainInterval, phraseToPlay.minGrainDur, phraseToPlay.maxGrainDur, pitchMultiplier, phraseToPlay.minVol, phraseToPlay.maxVol);
+			// if we're not at base pitch || we haven't hit the phraseDur yet, schedule next phrase
+			if (pitchMultiplier != phraseToPlay.pitchArray[0] || audioCtx.currentTime < phraseToPlay.targetTime) {
+				window.setTimeout(tickDownGranularPhrase, toneDur * 1000., granularPhraseIndex);
+			}
+		} else {
+			// this is the original granularPhrase behavior before I added this descending nonsense
+			//play the granularPhrase, checking not to repeat pitches
+			var pitchMultiplier;
+			do {
+				var newPitchIndex = Math.floor((phraseToPlay.pitchArray.length) * Math.random()); 
+				pitchMultiplier = phraseToPlay.pitchArray[newPitchIndex] * phraseToPlay.octaveMultiplier;
+			} while (phraseToPlay.lastPitch == pitchMultiplier);
+			var toneDur = playGranularTone(phraseToPlay.index, phraseToPlay.minToneDur, phraseToPlay.maxToneDur, phraseToPlay.grainInterval, phraseToPlay.minGrainDur, phraseToPlay.maxGrainDur, pitchMultiplier, phraseToPlay.minVol, phraseToPlay.maxVol);
+			// two ways of counting down: min/maxReps (for random pitch choices) 
+			// or checking to see whether we've exceeded the phraseDur (for descending phrases, since we always want to get back to the base note)
+			//if the number of reps is greater than 0 cue another one
+			if (phraseToPlay.numberOfReps > 0) {
+				window.setTimeout(tickDownGranularPhrase, toneDur * 1000., granularPhraseIndex);
+			}
+			//tick down the number of reps
+			granularPhrases[granularPhraseIndex].numberOfReps--;
+		}
+		//set last pitch used
+		granularPhrases[granularPhraseIndex].lastPitch = pitchMultiplier;
+	}
+
+
 //buffer, duration, pitch, volume
 //playGrain(this.buffer, 1., 1., 1.);
 
@@ -180,53 +275,7 @@ GranularTone.prototype.playGranularPhrase = function() {
 	tickDownGranularPhrase(this.index);
 }
 
-function tickDownGranularPhrase(granularPhraseIndex) {
-	var phraseToPlay = granularPhrases[granularPhraseIndex];
-	// two different processes depending on whether it's descending or not
-	// and this is kind of horrible, but what determines this is whether we use min/maxReps to determine duration
-	// or whether we provide a phraseDur explicitly.
-	if (phraseToPlay.phraseDur) {
-		var pitchMultiplier;
-		if (phraseToPlay.lastPitch == phraseToPlay.pitchArray[0]) {
-			var newPitchIndex = Math.floor((phraseToPlay.pitchArray.length - 1) * Math.random()) + 1;
-			pitchMultiplier = phraseToPlay.pitchArray[newPitchIndex];
-		} else {
-			var tempArray = [];
-			var i;
-			for (i = 0; i < phraseToPlay.pitchArray.length; i++) {
-				if (phraseToPlay.pitchArray[i] < phraseToPlay.lastPitch || phraseToPlay.lastPitch == 0) {
-					tempArray[i] = phraseToPlay.pitchArray[i];
-				}
-			}
-			pitchMultiplier = tempArray[Math.floor(tempArray.length * Math.random())];
-		}
-		//play phrase
-		var toneDur = playGranularTone(phraseToPlay.index, phraseToPlay.minToneDur, phraseToPlay.maxToneDur, phraseToPlay.grainInterval, phraseToPlay.minGrainDur, phraseToPlay.maxGrainDur, pitchMultiplier, phraseToPlay.minVol, phraseToPlay.maxVol);
-		// if we're not at base pitch || we haven't hit the phraseDur yet, schedule next phrase
-		if (pitchMultiplier != phraseToPlay.pitchArray[0] || audioCtx.currentTime < phraseToPlay.targetTime) {
-			window.setTimeout(tickDownGranularPhrase, toneDur * 1000., granularPhraseIndex);
-		}
-	} else {
-		// this is the original granularPhrase behavior before I added this descending nonsense
-		//play the granularPhrase, checking not to repeat pitches
-		var pitchMultiplier;
-		do {
-			var newPitchIndex = Math.floor((phraseToPlay.pitchArray.length) * Math.random()); 
-			pitchMultiplier = phraseToPlay.pitchArray[newPitchIndex] * phraseToPlay.octaveMultiplier;
-		} while (phraseToPlay.lastPitch == pitchMultiplier);
-		var toneDur = playGranularTone(phraseToPlay.index, phraseToPlay.minToneDur, phraseToPlay.maxToneDur, phraseToPlay.grainInterval, phraseToPlay.minGrainDur, phraseToPlay.maxGrainDur, pitchMultiplier, phraseToPlay.minVol, phraseToPlay.maxVol);
-		// two ways of counting down: min/maxReps (for random pitch choices) 
-		// or checking to see whether we've exceeded the phraseDur (for descending phrases, since we always want to get back to the base note)
-		//if the number of reps is greater than 0 cue another one
-		if (phraseToPlay.numberOfReps > 0) {
-			window.setTimeout(tickDownGranularPhrase, toneDur * 1000., granularPhraseIndex);
-		}
-		//tick down the number of reps
-		granularPhrases[granularPhraseIndex].numberOfReps--;
-	}
-	//set last pitch used
-	granularPhrases[granularPhraseIndex].lastPitch = pitchMultiplier;
-}
+
 
 // admitting that this is a little silly; ought to create the object in my switch below...
 function playGranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, phraseDur, pitchArray) {

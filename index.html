@@ -54,40 +54,44 @@ var listenButton = document.getElementById("listen");
 
 var listenButtonPressed = false;
 listenButton.onclick = function () {
-	if (listenButton.innerHTML == "Listen") {
-		//playGrain(audioBuffers[0], 0.1, 4.);
-		var fileNode = audioCtx.createBufferSource();
-		var gainNode = audioCtx.createGain();
-		gainNode.connect(audioCtx.destination);
-		
-		fileNode.buffer = audioBuffers[0];	
-		
-		fileNode.connect(gainNode);
-		fileNode.playbackRate.value = 1.;
-		
-		// delay before starting, time into buffer, duration of excerpt
-		fileNode.start(audioCtx.currentTime + 0.1, 0.1, 1.);
-		
-		//var audioBufferNode = audioCtx.createBufferSource();
-		//audioBufferNode.buffer = audioBuffers[0];
-		//audioBufferNode.connect(gainNode);
-		//audioBufferNode.start();
-		//gainNode.gain.setValueCurveAtTime(grainWindow, audioCtx.currentTime + 0.1, 1.);
-		
-		
-		listenButtonPressed = true;
-	}
-	if (listenButton.className == "off") {
-		listenButton.className = "on";
-		listenButton.innerHTML = "Stop Listening";
-		pollForChanges(true);
-		// I guess this is pretty hacky, but sometimes the message doesn't seem to get through...
-		window.setTimeout(getCues, 3500., true);
-	} else {
-		listenButton.className = "off";
-		listenButton.innerHTML = "Listen";
-		//alert(intermittentSounds);
-		stopEverything();
+	if (buffersAreLoaded) {
+		if (listenButton.innerHTML == "Listen") {
+			//playGrain(audioBuffers[0], 0.1, 4.);
+			var fileNode = audioCtx.createBufferSource();
+			var gainNode = audioCtx.createGain();
+			gainNode.connect(audioCtx.destination);
+			
+			fileNode.buffer = audioBuffers[0];	
+			
+			fileNode.connect(gainNode);
+			fileNode.playbackRate.value = 1.;
+			
+			// delay before starting, time into buffer, duration of excerpt
+			fileNode.start(audioCtx.currentTime + 0.1, 0.1, 1.);
+			
+			//var audioBufferNode = audioCtx.createBufferSource();
+			//audioBufferNode.buffer = audioBuffers[0];
+			//audioBufferNode.connect(gainNode);
+			//audioBufferNode.start();
+			//gainNode.gain.setValueCurveAtTime(grainWindow, audioCtx.currentTime + 0.1, 1.);
+			
+			
+			listenButtonPressed = true;
+		}
+		if (listenButton.className == "off") {
+			listenButton.className = "on";
+			listenButton.innerHTML = "Stop Listening";
+			pollForChanges(true);
+			// I guess this is pretty hacky, but sometimes the message doesn't seem to get through...
+			// Or maybe it's causing me to get two conflicting json files back?
+			// Is this why buttons sometimes turn on and then off again, unbidden?
+			//window.setTimeout(getCues, 3500., true);
+		} else {
+			listenButton.className = "off";
+			listenButton.innerHTML = "Listen";
+			//alert(intermittentSounds);
+			stopEverything();
+		}
 	}
 }
 
@@ -155,6 +159,8 @@ for (var i = 0; i < numberOfButtons; i++) {
 	var thisCue = "cue" + i;
 	cues2Play[thisCue] = "off";
 }
+
+cues2Play["panic"] = "no";
 
 // audio setup stuff...
 
@@ -263,15 +269,21 @@ function buttonActivated(index) {
 			break;
 		case 7:
 			//Ο χώρος 
-			//add granular phrase thing...
-			//playGranularPhrase:0, 3, 0.5, 6., 10., 2, 3, 0.2, 1., 1.2, 0.5, 0.75, 0, [9./8., 1., 7./6.]
-			window.setTimeout("playGranularPhrase(audioBuffers[0], 6., 10., 2, 3, 0.3, 1., 1.2, 0.35, 0.5, 0, 0., [9./8., 1., 7./6.])", 1000.);
 			//playGranularSound:0, 2, 0.5, 35., 45., 0.2, 1., 1.2, 0.75, 0.75, 0.35, 0.5
 			//playGranularTone(audioBuffers[0], 35., 45., 0.5, 1., 1.2, 0.75, 0.35, 0.5);
 			var tone04 = new GranularTone(audioBuffers[0], 35., 45., 0.5, 1., 1.2, 0.35, 0.5, 0.75);
 			tone04.connect(grainGainNode);
 			tone04.play();
 			granularTones.push(tone04);
+			
+			//add granular phrase thing...
+			//playGranularPhrase:0, 3, 0.5, 6., 10., 2, 3, 0.2, 1., 1.2, 0.5, 0.75, 0, [9./8., 1., 7./6.]
+			//playGranularPhrase(granularPhraseIndex, minToneDur, maxToneDur, minReps, maxReps, grainInterval, minGrainDur, maxGrainDur, minVol, maxVol, octaveShift, phraseDur, pitchArray)
+			var testGranularPhrase = new GranularTone(audioBuffers[0], 6., 10., 0.3, 1., 1.2, 0.35, 0.5, [9./8., 1., 7./6.]);
+			testGranularPhrase.connect(grainGainNode);
+			//testGranularPhrase.playRandomPhrase(2, 3, 0);
+			var soundID = granularTones.push(testGranularPhrase) - 1;
+			delayedSounds.push(window.setTimeout("granularTones[" + soundID + "].playRandomPhrase(2, 3, 0)", 1000.));
 			break;
 		case 8:
 			//pre-σχόλια
@@ -372,6 +384,7 @@ function buttonActivated(index) {
 			etsiApoMas.connect(phraseGainNode);
 			etsiApoMas.play();
 			intermittentSounds.push(etsiApoMas);
+			
 			//add descending granular phrase thing here!
 			//playGranularDescPhrase:0: 4, 0.5, 0.5, 4.8, 35., 0.1, 0.2, 0.4, 0.15, 0.25, 1, [4./3., 9./5., 8./5., 3./2., 7./5.];
 			delayedSounds.push(window.setTimeout("playGranularPhrase(audioBuffers[0], 0.5, 4.8, 0, 0, 0.1, 0.2, 0.4, 0.15, 0.25, 1, 35., [4./3., 9./5., 8./5., 3./2., 7./5.])", 1500.));
@@ -489,6 +502,7 @@ bufferLoader = new BufferLoader(audioCtx,
 bufferLoader.load();
 
 function finishedLoading(bufferList) {
+	//alert("done loading sounds!");
 	for (var i = 0; i < bufferList.length; ++i) {
 		audioBuffers[i] = bufferList[i];
 	}
@@ -515,6 +529,7 @@ function getCues(force) {
 		}
 	}
 	xhr.onreadystatechange = function() {
+		//alert("readyState: " + xhr.readyState + "; status: " + xhr.status);
 		if (xhr.readyState == 4) {
 			// adding this to see if it will fix these errors, which seem to show up (sometimes?)
 			// when I write to the json file (e.g., reset) while it is being read
@@ -534,6 +549,8 @@ function getCues(force) {
 				try {
 					var newCues2Play = JSON.parse(xhr.responseText);
 					//buffersAreLoaded
+					//so I think I'm going to take out this check, since it should really be done when the 
+					// Listen button is pushed, not here...
 					if (buffersAreLoaded) {
 						for (var cue in newCues2Play) {
 							if (cues2Play[cue] != newCues2Play[cue]) {
@@ -546,6 +563,7 @@ function getCues(force) {
 										//intermittentSounds[index] = new IntermittentSound(index, 1., 5., 3, 5);
 										//intermittentSounds[index].playIntermittentSound();
 									} else {
+										//alert("is something deactivating me?");
 										buttonDeactivated(cueIndex);
 									}
 								} else {
@@ -560,6 +578,7 @@ function getCues(force) {
 					// btw, console.log doesn't seem to log to Firefox console
 					//console.log("looks like malformed json?");
 					//alert("malformed json!");
+					alert(e);
 				}
 			}
 		}
