@@ -60,20 +60,24 @@ listenButton.onclick = function () {
 			var fileNode = audioCtx.createBufferSource();
 			var gainNode = audioCtx.createGain();
 			gainNode.connect(audioCtx.destination);
-			
 			fileNode.buffer = audioBuffers[0];	
-			
 			fileNode.connect(gainNode);
 			fileNode.playbackRate.value = 1.;
 			
-			// delay before starting, time into buffer, duration of excerpt
-			fileNode.start(audioCtx.currentTime + 0.1, 0.1, 1.);
+			var grainWindow = (function() {
+				var grainWindow;
+				var grainWindowLength = 16384;
+				grainWindow = new Float32Array(grainWindowLength);
+				for (var i = 0; i < grainWindowLength; ++i)
+				    grainWindow[i] = Math.sin(Math.PI * i / grainWindowLength);
+				return grainWindow;
+			})();
 			
-			//var audioBufferNode = audioCtx.createBufferSource();
-			//audioBufferNode.buffer = audioBuffers[0];
-			//audioBufferNode.connect(gainNode);
-			//audioBufferNode.start();
-			//gainNode.gain.setValueCurveAtTime(grainWindow, audioCtx.currentTime + 0.1, 1.);
+			var slightDelay = audioCtx.currentTime + 0.1;
+			// delay before starting, time into buffer, duration of excerpt
+			fileNode.start(slightDelay, 0.1, 1.);
+			// windows, start time, duration
+			gainNode.gain.setValueCurveAtTime(grainWindow, slightDelay, 1.);
 			
 			
 			listenButtonPressed = true;
@@ -82,14 +86,9 @@ listenButton.onclick = function () {
 			listenButton.className = "on";
 			listenButton.innerHTML = "Stop Listening";
 			pollForChanges(true);
-			// I guess this is pretty hacky, but sometimes the message doesn't seem to get through...
-			// Or maybe it's causing me to get two conflicting json files back?
-			// Is this why buttons sometimes turn on and then off again, unbidden?
-			//window.setTimeout(getCues, 3500., true);
 		} else {
 			listenButton.className = "off";
 			listenButton.innerHTML = "Listen";
-			//alert(intermittentSounds);
 			stopEverything();
 		}
 	}
@@ -98,7 +97,9 @@ listenButton.onclick = function () {
 var nudgeButton = document.getElementById("nudge");
 
 nudgeButton.onclick = function () {
-	getCues(true);
+	if (listenButton.className == "on") {
+		getCues(true);
+	}
 }
 
 var buttonTexts = ["Πλησιέστατα",
@@ -132,19 +133,16 @@ for (var i = 0; i < numberOfButtons; i++) {
 	button.setAttribute("id", "play" + i);
 	button.setAttribute("disabled", true);
 	button.setAttribute("class", "off");
-	//button.innerHTML = "Off";
 	button.innerHTML = buttonTexts[i];
 	button.onclick = function () {
 		var button = this;
 		var index = button.id.slice(4);
-		//alert(index);
 		if (button.className == "off") {
 			buttonActivated(index);
 		} else {
 			buttonDeactivated(index);
 		}
 	}
-	//button.hasBananas = "you betcha";
 	buttons.appendChild(button);
 	if (i==2 || i==6 || i==8 || i==14 || i==19) {
 		var br = document.createElement("br");
@@ -189,11 +187,8 @@ var delayedSounds = [];
 // polling and triggering stuff...
 
 function buttonDeactivated(index) {
-	//alert("play" + index);
 	var buttonClicked = document.getElementById("play" + index);
 	buttonClicked.className = "off";
-	//button.innerHTML = buttonTexts[i];
-	//buttonClicked.innerHTML = "Off";
 	buttonClicked.innerHTML = buttonTexts[index];
 }
 
@@ -201,9 +196,6 @@ function buttonActivated(index) {
 	var buttonClicked = document.getElementById("play" + index);
 	buttonClicked.className = "on";
 	buttonClicked.innerHTML = "On";
-	//intermittentSounds[index] = new IntermittentSound(index, 0.1, 0.1, 0, 0);
-	//intermittentSounds[index].playIntermittentSound();
-	//alert(buttonClicked.id);
 	
 	switch (Number(index)) {
 		case 0:	
@@ -463,7 +455,6 @@ function buttonActivated(index) {
 function stopEverything() {
 	for (var i = 0; i < intermittentSounds.length; i++) {
 		intermittentSounds[i].stop();
-		//alert(intermittentSounds[i]);
 	}
 	for (var i = 0; i < delayedSounds.length; i++) {
 		window.clearTimeout(delayedSounds[i]);
@@ -506,7 +497,6 @@ bufferLoader = new BufferLoader(audioCtx,
 bufferLoader.load();
 
 function finishedLoading(bufferList) {
-	//alert("done loading sounds!");
 	for (var i = 0; i < bufferList.length; ++i) {
 		audioBuffers[i] = bufferList[i];
 	}
@@ -526,7 +516,6 @@ function getCues(force) {
 			try{
 				xhr = new ActiveXObject("Microsoft.XMLHTTP");
 			} catch(e) {
-				// Something went wrong
 				alert("Your browser broke!");
 				return false;
 			}
@@ -535,39 +524,18 @@ function getCues(force) {
 	xhr.onreadystatechange = function() {
 		//alert("readyState: " + xhr.readyState + "; status: " + xhr.status);
 		if (xhr.readyState == 4) {
-			// adding this to see if it will fix these errors, which seem to show up (sometimes?)
-			// when I write to the json file (e.g., reset) while it is being read
-			// maybe this will make sure the data's really well-formed before parsing it?
-			// as I type this, I begin to doubt it...
-			// anyway, here are the errors...
-			// SyntaxError: JSON.parse: unterminated string at line 1 column 320 of the JSON data Lysias:689
-			// SyntaxError: JSON.parse: unterminated string literal at line 1 column 323 of the JSON data Lysias:689
-			// SyntaxError: JSON.parse: end of data after property value in object at line 1 column 322 of the JSON data Lysias:689
-			// SyntaxError: JSON.parse: unterminated string literal at line 1 column 323 of the JSON data
-			
-			// update: this does not fix the problem
-			// update: seems when I turn comment out the setRequestHeader('Cache-Control', 'no-cache')
-			// this unterminated string problem goes away...
-			// oh, nope, saw it happen again, mostly when turning a button off, but once when turning it on
 			if (xhr.status == 200) {
 				try {
 					var newCues2Play = JSON.parse(xhr.responseText);
-					//buffersAreLoaded
-					//so I think I'm going to take out this check, since it should really be done when the 
-					// Listen button is pushed, not here...
-					if (buffersAreLoaded) {
-						for (var cue in newCues2Play) {
+					// took out the buffersAreLoaded check, as that happens back when you first click the Listen button
+					for (var cue in newCues2Play) {
 							if (cues2Play[cue] != newCues2Play[cue]) {
 								cues2Play[cue] = newCues2Play[cue];
 								var cueIndex = cue.slice(3);
-								//alert("Hi, mom!");
 								if (cue != "panic") {
 									if (cues2Play[cue] == "on") {
 										buttonActivated(cueIndex);
-										//intermittentSounds[index] = new IntermittentSound(index, 1., 5., 3, 5);
-										//intermittentSounds[index].playIntermittentSound();
 									} else {
-										//alert("is something deactivating me?");
 										buttonDeactivated(cueIndex);
 									}
 								} else {
@@ -576,36 +544,19 @@ function getCues(force) {
 								}
 							}
 						}
-					}
 				} catch(e) {
-					// Don't really want to do anything but suppress the error message, I guess...
-					// btw, console.log doesn't seem to log to Firefox console
-					//console.log("looks like malformed json?");
-					//alert("malformed json!");
 					alert(e);
 				}
 			}
 		}
 	}
-
-	// OK!  Seems this whole approach will not work, as my server started generating an error message
-	// and stopped even delivering the json file manually (error page instead), suggesting this is a host problem,
-	// and perhaps more to the point, a bad architecture
-	// reverting to how it was before, with the idea of implementing something with
-	// Comet or Ajax Push or TCP sockets down the road...
-	
-	// xhr.open('GET', 'test.html?_=' + new Date.getTime());
-	// xhr.open("GET", myurl + "?author=" + value-of-querystring-param, true);
-	// xhr.open("GET", myurl + "?author=" + encodeURIComponent(param), true);
 	
 	if (force) {
-		// Date object for time stamps
+		// Adding a time stamp gives it a unique name which should force the browser to actually read the json file
+		// instead of using a cached version
 		var currentTime = new Date();
 		var timeStamp = currentTime.getTime();
-		//alert(timeStamp);
 		xhr.open('GET', 'cues.json?_=' + timeStamp, true);
-		// let's see if this works to prevent caching of my json file, 
-		// which seems to result in missed messages in some cases
 		xhr.setRequestHeader('Cache-Control', 'no-cache');
 	} else {
 		xhr.open('GET', 'cues.json', true);

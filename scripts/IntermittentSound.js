@@ -16,8 +16,6 @@ function IntermittentSound(buffer, minPause, maxPause, minReps, maxReps, minVol,
 	this.maxReps = maxReps;
 	this.minVol = minVol;
 	this.maxVol = maxVol;
-	//what was this for?
-	//this.numberOfInputs = 0;
 	this.outputNode;
 	this.isPlaying = false;
 	
@@ -45,29 +43,20 @@ function IntermittentSound(buffer, minPause, maxPause, minReps, maxReps, minVol,
 	
 	// making this a private member function
 	function tickDownIntermittentSound() {
-		//alert("inside tickdownsound");
 		var volume = (that.maxVol - that.minVol) * Math.random() + that.minVol;
-		//alert("vol=" + volume);
 		playBuffer(that.buffer, volume);
-		//alert("just called playBuffer");
 		var bufferDur = that.buffer.duration;
-		//alert("bufferDur=" + bufferDur);
-		// ok, this will need to be replaced by having a stop message that will stop execution...
 		if (that.numberOfReps > 0 && that.isPlaying) {
 			var pauseDur = (that.maxPause - that.minPause) * Math.random() + that.minPause;
 			timerID = window.setTimeout(tickDownIntermittentSound, (pauseDur + bufferDur) * 1000.);
-			//alert("calling it again");
 		}
 		that.numberOfReps--;
 	}
 	
 	this.play = function() {
-		//alert("inside the play method");
 		this.isPlaying = true;
 		this.numberOfReps = Math.floor(((this.maxReps - this.minReps) + 1) * Math.random() + this.minReps);
-		//alert(this.numberOfReps);
 		tickDownIntermittentSound();
-		//alert("just called tickDownIntermittentSound");
 	}
 	
 	this.stop = function() {
@@ -76,25 +65,14 @@ function IntermittentSound(buffer, minPause, maxPause, minReps, maxReps, minVol,
 	}
 	
 	this.connect = function(nodeToConnectTo) {
-		//alert("inside the connect method");
 		try {
 			if (nodeToConnectTo.destination) {
 				this.outputNode = nodeToConnectTo.destination;
 			} else {
 				this.outputNode = nodeToConnectTo;
 			}
-			//alert("setting output node to specified node");
 		} catch(e) {
 			alert("It seems you have not specified a valid node.");
 		}
 	}
 }
-
-/*
-IntermittentSound.prototype.playIntermittentSound = function() {
-	this.numberOfReps = Math.floor(((this.maxReps - this.minReps) + 1) * Math.random() + this.minReps);
-	
-	this.tickDownIntermittentSound(this.index);
-}
-*/
-
