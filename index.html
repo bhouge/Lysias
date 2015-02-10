@@ -545,7 +545,9 @@ function getCues(force) {
 							}
 						}
 				} catch(e) {
-					alert(e);
+					// Of course we don't want to alert this; we want it to fail unobtrusively,
+					// since all it means is that we got a bad json file... 
+					var error = e;
 				}
 			}
 		}
