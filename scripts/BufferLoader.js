@@ -27,8 +27,12 @@ BufferLoader.prototype.loadBuffer = function(url, index) {
           return;
         }
         loader.bufferList[index] = buffer;
-        if (++loader.loadCount == loader.urlList.length)
-          loader.onload(loader.bufferList);
+        if (++loader.loadCount == loader.urlList.length) {
+        	// added the original urlList array to the end of the bufferList array,
+        	// so you can access what buffers are being returned to you
+        	loader.bufferList.push(loader.urlList);
+            loader.onload(loader.bufferList);
+        }
       },
       function(error) {
         console.error('decodeAudioData error', error);

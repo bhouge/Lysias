@@ -13,12 +13,36 @@
 <button id="reset" class="off">Reset</button><br>
 <button id="panic" class="off">Panic</button><br>
 <button id="pitch" class="off">F 176 Hz</button><br>
+<button id="startStop" class="off">Record</button><br>
 <br>
 </div>
 
 
 <script src="scripts/BufferLoader.js"></script>
+<script src="scripts/LysiasRecorder.js"></script>
 <script type="text/javascript">
+
+var startStopButton = document.getElementById("startStop");
+startStopButton.onclick = startStop;
+
+//toggle whether or not audio is automatically recorded for each phrase.
+function startStop() {
+	if (this.className == "off") {
+		if (!userAudioInitialized) {
+			startUserMedia();
+		}
+		wantToBeRecording = true;
+		this.className = "on";
+		this.innerHTML = "stop";
+	} else {
+		if (recording) {
+			cancelAudioRecording();
+		}
+		wantToBeRecording = false;
+		this.className = "off";
+		this.innerHTML = "record";
+	}
+}
 
 var resetButton = document.getElementById("reset");
 resetButton.onclick = function () {
@@ -272,10 +296,18 @@ function playGrain(bufferToPlay, grainDuration, pitchMultiplier, volume) {
 var audioBuffers = [];
 
 bufferLoader = new BufferLoader(audioCtx, 
+		'sounds/unbalanced/uncompressed/',
+		['eeeeee.wav'], 
+		 finishedLoading);
+bufferLoader.load();
+
+/*
+bufferLoader = new BufferLoader(audioCtx, 
 		'sounds/unbalanced/compressed/',
 		['eeeeee.mp4'], 
 		 finishedLoading);
 bufferLoader.load();
+*/
 
 
 function finishedLoading(bufferList) {

@@ -466,13 +466,57 @@ function stopEverything() {
 
 function pollForChanges(force) {
 	getCues(force);
+	// shouldn't there be a check here to see if the button is active?
+	// currently looks like you can never stop listening...
 	window.setTimeout(pollForChanges, 1000., false);
 }
+
 
 // network and file loading stuff
 var audioBuffers = [];
 var buffersAreLoaded = false;
 
+// OK, here's the plan:
+// the bufferLoader variable defined below gets created once and used to populate
+// audioBuffers[] array with prerecorded files on load.
+// I'm also going to set up a new method that will selectively overwrite the buffers
+// using the name of the file in the urlList to decide which index in audioBuffers[] to set it to
+
+bufferLoader = new BufferLoader(audioCtx, 
+		'sounds/unbalanced/uncompressed/',
+		['eeeeee.wav', 
+		 'Lysias1.aac', 
+		 'Lysia2.wav', 
+		 'Lysia3.wav'], 
+		 finishedLoading);
+bufferLoader.load();
+
+/*
+bufferLoader = new BufferLoader(audioCtx, 
+		'sounds/unbalanced/uncompressed/',
+		['eeeeee.wav', 
+		 'Lysia1.wav', 
+		 'Lysia2.wav', 
+		 'Lysia3.wav',
+		 'gramatikon.wav',
+		 'list1.wav',
+		 'list2.wav',
+		 'list3.wav',
+		 'list4.wav',
+		 'list5.wav',
+		 'list6.wav',
+		 'ending1.wav',
+		 'ending2.wav',
+		 'ending3.wav',
+		 'ending4.wav',
+		 'ending5.wav',
+		 'ending6.wav',
+		 'ending7.wav'], 
+		 finishedLoading);
+bufferLoader.load();
+*/
+
+/*
 bufferLoader = new BufferLoader(audioCtx, 
 		'sounds/unbalanced/compressed/',
 		['eeeeee.mp4', 
@@ -492,15 +536,40 @@ bufferLoader = new BufferLoader(audioCtx,
 		 'ending4.mp4',
 		 'ending5.mp4',
 		 'ending6.mp4',
-		 'ending7.mp4',], 
+		 'ending7.mp4'], 
 		 finishedLoading);
 bufferLoader.load();
+*/
 
 function finishedLoading(bufferList) {
-	for (var i = 0; i < bufferList.length; ++i) {
+	for (var i = 0; i < (bufferList.length - 1); ++i) {
 		audioBuffers[i] = bufferList[i];
 	}
 	buffersAreLoaded = true;
+}
+
+function finishedReloading(bufferList) {
+	var bufferToReplace;
+	if (bufferList.length == 2) {
+		bufferToReplace = bufferList[bufferList.length - 1];
+		var bufferIndex = bufferToReplace("Lysias(.*)\.wav")[1];
+		alert(bufferIndex);
+		audioBuffers[bufferIndex] = bufferList[0];
+	}
+	
+	/*
+	for (var i = 0; i < (bufferList.length - 1); ++i) {
+		audioBuffers[i] = bufferList[i];
+	}
+	*/
+}
+
+function loadAndPlay(index) {
+	bufferReloader = new BufferLoader(audioCtx, 
+			'sounds/LiveRecordings/',
+			['Lysias1.wav'], 
+			 finishedReloading);
+	bufferReloader.load();
 }
 
 function getCues(force) {
@@ -534,7 +603,11 @@ function getCues(force) {
 								var cueIndex = cue.slice(3);
 								if (cue != "panic") {
 									if (cues2Play[cue] == "on") {
-										buttonActivated(cueIndex);
+										if (cueIndex == 3) {
+											loadAndPlay(cueIndex);
+										} else {
+											buttonActivated(cueIndex);
+										}
 									} else {
 										buttonDeactivated(cueIndex);
 									}
@@ -567,6 +640,7 @@ function getCues(force) {
 	xhr.overrideMimeType("application/json");
 	xhr.send(null);
 }
+
 
 </script>
 
